@@ -18,7 +18,7 @@ const COMPARSA_ORDERS = {
       {
         name: 'Bando Moro',
         id: 'moro',
-        comparsas: ['Estudiantes', 'Zíngaros', 'Contrabandistas', 'Cristianos', 'Piratas']
+        comparsas: ['Huestes del Cadí', 'Musulmanes', 'Marroquíes', 'Realistas']
       },
       {
         name: 'Bando Cristiano',

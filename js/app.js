@@ -482,13 +482,17 @@ function renderTabPrograma(container) {
 
   container.innerHTML = EVENTOS.map(day => {
     const evts = day.events.map(evt => {
-      const isPast    = evt.datetime < now;
-      const isUpcoming = !isPast && (evt.datetime - now) < 3600000; // próxima hora
-      const orderBadge = evt.order
-        ? `<span class="ev-order-badge order-${evt.order.toLowerCase()}" title="Orden de marcha ${evt.order}">Orden ${evt.order}</span>`
+      const isPast     = evt.datetime < now;
+      const isUpcoming = !isPast && (evt.datetime - now) < 3600000;
+      const hasOrder   = !!evt.order;
+      const orderBadge = hasOrder
+        ? `<span class="ev-order-badge order-${evt.order.toLowerCase()}">Orden ${evt.order} · Ver marcha →</span>`
+        : '';
+      const orderAttrs = hasOrder
+        ? `data-order="${evt.order}" role="button" tabindex="0" aria-label="${escapeHtml(evt.name)} — Ver Orden ${evt.order}"`
         : '';
       return `
-        <div class="ev-item${isPast ? ' ev-past' : ''}${evt.highlight ? ' ev-highlight' : ''}${isUpcoming ? ' ev-upcoming' : ''}">
+        <div class="ev-item${isPast ? ' ev-past' : ''}${evt.highlight ? ' ev-highlight' : ''}${isUpcoming ? ' ev-upcoming' : ''}${hasOrder ? ' ev-has-order' : ''}" ${orderAttrs}>
           <div class="ev-time">${evt.time}</div>
           <div class="ev-body">
             <div class="ev-name">${escapeHtml(evt.name)}</div>
@@ -504,6 +508,26 @@ function renderTabPrograma(container) {
         ${evts}
       </div>`;
   }).join('');
+
+  container.querySelectorAll('.ev-item[data-order]').forEach(item => {
+    item.addEventListener('click', () => showComparsa(item.dataset.order));
+    item.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showComparsa(item.dataset.order); }
+    });
+  });
+}
+
+// ── Ir directamente a un orden de marcha ──────────────────
+
+function showComparsa(orderKey) {
+  switchNavTab('comparsas', true);
+  requestAnimationFrame(() => {
+    const block = document.getElementById(`order-block-${orderKey}`);
+    if (!block) return;
+    block.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    block.classList.add('order-highlight');
+    setTimeout(() => block.classList.remove('order-highlight'), 1600);
+  });
 }
 
 // ── Pestaña: Comparsas ────────────────────────────────────
@@ -528,7 +552,7 @@ function renderTabComparsas(container) {
     }).join('');
 
     return `
-      <div class="order-block">
+      <div class="order-block" id="order-block-${key}">
         <div class="order-header">
           <span class="order-letter">${key}</span>
           <span class="order-label">${order.label}</span>

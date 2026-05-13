@@ -531,6 +531,8 @@ body {
 }
 
 /* ── 14. BANNER MODO VISTA ───────────────────────────────── */
+.live-mode-banner[hidden] { display: none; }
+
 .live-mode-banner {
   margin: 0.5rem 1rem;
   padding: 0.9rem 1rem;
@@ -1099,6 +1101,29 @@ body {
 .ev-order-badge.order-a { background: rgba(200, 168, 75, 0.18); color: var(--gold); }
 .ev-order-badge.order-b { background: rgba(29, 78, 216, 0.22); color: var(--blue-light); }
 .ev-order-badge.order-c { background: rgba(176, 16, 32, 0.22); color: var(--red-light); }
+
+.ev-item.ev-has-order {
+  cursor: pointer;
+}
+
+.ev-item.ev-has-order:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ev-item.ev-has-order:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: -3px;
+}
+
+.order-block.order-highlight {
+  animation: order-pulse 1.6s ease;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes order-pulse {
+  0%, 100% { background: transparent; }
+  25%       { background: rgba(200, 168, 75, 0.14); }
+}
 
 /* ── 26. ÓRDENES DE COMPARSA ─────────────────────────────── */
 .comparsa-intro {

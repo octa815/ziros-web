@@ -1,0 +1,757 @@
+// ============================================================
+//  ZIROS — LA ALKAZABA · ELDA 2026
+//  Lógica principal: tiempo, renderizado, modal, navegación
+// ============================================================
+
+'use strict';
+
+// ── Estado ────────────────────────────────────────────────
+let viewingEntry      = null; // null = auto, entry = modo manual
+let currentFocusTrigger = null;
+let activeNavTab      = 'menus'; // 'menus' | 'programa' | 'comparsas'
+
+// ── Utilidades de tiempo ──────────────────────────────────
+
+function pad(n) {
+  return String(n).padStart(2, '0');
+}
+
+function formatTime(date) {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function formatCurrentTime(date) {
+  const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  return `${days[date.getDay()]} · ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+// Cuenta atrás compacta (sin segundos)
+function formatCountdown(targetDate) {
+  const diff = targetDate - new Date();
+  if (diff <= 0) return '¡Ya!';
+  const totalSecs = Math.floor(diff / 1000);
+  const days  = Math.floor(totalSecs / 86400);
+  const hours = Math.floor((totalSecs % 86400) / 3600);
+  const mins  = Math.floor((totalSecs % 3600) / 60);
+  if (days > 0)  return `${days}d ${hours}h ${mins}m`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
+// Cuenta atrás detallada con segundos (para Idella)
+function formatCountdownFull(targetDate) {
+  const diff = targetDate - new Date();
+  if (diff <= 0) return null; // Ha pasado
+  const totalSecs = Math.floor(diff / 1000);
+  const days  = Math.floor(totalSecs / 86400);
+  const hours = Math.floor((totalSecs % 86400) / 3600);
+  const mins  = Math.floor((totalSecs % 3600) / 60);
+  const secs  = totalSecs % 60;
+  return { days, hours, mins, secs };
+}
+
+function getProgress(entry) {
+  const now   = new Date();
+  const total = entry.end - entry.start;
+  const elapsed = now - entry.start;
+  return Math.min(100, Math.max(0, (elapsed / total) * 100));
+}
+
+function getTimeRemaining(entry) {
+  const diff = entry.end - new Date();
+  if (diff <= 0) return null;
+  const totalMins = Math.ceil(diff / 60000);
+  const hours = Math.floor(totalMins / 60);
+  const mins  = totalMins % 60;
+  if (hours > 0) return `${hours}h ${mins}m restantes`;
+  return `${mins} min restantes`;
+}
+
+// ── Cálculo del estado ────────────────────────────────────
+
+function getCurrentState() {
+  const now = new Date();
+  for (const entry of TIMELINE) {
+    if (now >= entry.start && now < entry.end) {
+      return { type: 'active', entry };
+    }
+  }
+  const upcoming = TIMELINE.find(e => e.start > now);
+  if (!upcoming) return { type: 'post-event' };
+  if (now < TIMELINE[0].start) return { type: 'pre-event', next: upcoming };
+  return { type: 'between', next: upcoming };
+}
+
+// ── Hora actual ───────────────────────────────────────────
+
+function renderCurrentTime() {
+  const el = document.getElementById('current-time');
+  if (el) el.textContent = formatCurrentTime(new Date());
+}
+
+// ── Renderizado principal ─────────────────────────────────
+
+function renderState() {
+  const mealDisplay = document.getElementById('meal-display');
+  const dishListEl  = document.getElementById('dish-list');
+  if (!mealDisplay || !dishListEl) return;
+
+  dishListEl.innerHTML = ''; // dishes live inside the meal card now
+
+  if (viewingEntry) {
+    renderMealCard(viewingEntry, 'vista', mealDisplay);
+    return;
+  }
+
+  const state = getCurrentState();
+  switch (state.type) {
+    case 'active':
+      renderMealCard(state.entry, 'ahora', mealDisplay);
+      break;
+    case 'between':
+      renderMealCard(state.next, 'proxima', mealDisplay);
+      break;
+    case 'pre-event':
+      renderPreEvent(state.next, mealDisplay);
+      break;
+    case 'post-event':
+      renderPostEvent(mealDisplay);
+      break;
+  }
+}
+
+// ── Tarjeta de comida ─────────────────────────────────────
+
+function renderMealCard(entry, mode, container) {
+  const isActive   = mode === 'ahora';
+  const isUpcoming = mode === 'proxima';
+
+  const badgeHTML = isActive
+    ? `<span class="badge badge-ahora" role="status">● AHORA</span>`
+    : isUpcoming
+    ? `<span class="badge badge-proxima">PRÓXIMA</span>`
+    : `<span class="badge badge-vista">VISTA PREVIA</span>`;
+
+  let timeExtra = '';
+  if (isActive) {
+    const pct = getProgress(entry).toFixed(1);
+    const rem = getTimeRemaining(entry) || '';
+    timeExtra = `
+      <div class="progress-wrap">
+        <div class="progress-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso de la comida">
+          <div class="progress-fill" style="width:${pct}%"></div>
+        </div>
+        <span class="progress-label">${rem}</span>
+      </div>`;
+  } else if (isUpcoming) {
+    const cd = formatCountdown(entry.start);
+    timeExtra = `
+      <div class="countdown-wrap" aria-live="off">
+        <div class="countdown-label">Empieza en</div>
+        <div class="countdown-value" id="countdown-value">${cd}</div>
+        <div class="countdown-start">a las ${formatTime(entry.start)}</div>
+      </div>`;
+  }
+
+  const icon = MEAL_ICONS[entry.mealType] || '🍽️';
+  const collapseId = `dishes-collapse-${entry.id}`;
+
+  let dishesHTML = '';
+  const allFlat = flattenDishes(entry);
+  if (allFlat.length) {
+    const previewNames = allFlat.slice(0, 3).map(d => escapeHtml(d.name)).join(' · ');
+    const preview = allFlat.length > 3 ? previewNames + ' · …' : previewNames;
+
+    const hasSections = entry.dishes[0] && entry.dishes[0].items !== undefined;
+    let dishItemsHTML = '';
+    let idx = 0;
+    if (hasSections) {
+      for (const sec of entry.dishes) {
+        if (sec.section) {
+          dishItemsHTML += `<div class="dish-section-label">${escapeHtml(sec.section)}</div>`;
+        }
+        for (const dish of (sec.items || [])) {
+          dishItemsHTML += buildDishButton(dish, idx++, entry.id);
+        }
+      }
+    } else {
+      for (const dish of entry.dishes) {
+        dishItemsHTML += buildDishButton(dish, idx++, entry.id);
+      }
+    }
+
+    dishesHTML = `
+      <div class="dishes-section">
+        <button class="dishes-toggle"
+                aria-expanded="false"
+                aria-controls="${collapseId}">
+          <span class="dishes-toggle-icon" aria-hidden="true">▾</span>
+          <span class="dishes-toggle-label">Ver platos</span>
+          <span class="dishes-toggle-preview">${preview}</span>
+        </button>
+        <div class="dishes-collapse" id="${collapseId}" hidden>
+          ${dishItemsHTML}
+        </div>
+      </div>`;
+  }
+
+  container.innerHTML = `
+    <div class="meal-card type-${entry.mealType} fade-in" role="region" aria-label="${entry.mealLabel} · ${entry.dayLabel}">
+      <div class="meal-card-header">
+        <div class="meal-badge-row">
+          ${badgeHTML}
+          <span class="badge badge-day">${entry.dayLabel}</span>
+        </div>
+        <div class="meal-name-wrap">
+          <span class="meal-icon" aria-hidden="true">${icon}</span>
+          <h2 class="meal-name">${entry.mealLabel.toUpperCase()}</h2>
+        </div>
+        <div class="meal-time">${formatTime(entry.start)} — ${formatTime(entry.end)}</div>
+        ${timeExtra}
+      </div>
+      ${dishesHTML}
+    </div>`;
+
+  const toggleBtn = container.querySelector('.dishes-toggle');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const collapse = document.getElementById(collapseId);
+      if (!collapse) return;
+      const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+      toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
+      if (isExpanded) collapse.setAttribute('hidden', '');
+      else collapse.removeAttribute('hidden');
+    });
+
+    container.querySelectorAll('.dish-item').forEach(btn => {
+      btn.addEventListener('click', onDishClick);
+    });
+  }
+}
+
+// ── Pre-evento: cuenta atrás al Pasodoble Idella ──────────
+
+function renderPreEvent(firstEntry, container) {
+  const now = new Date();
+  const isBeforeIdella = now < PRIMERA_DIANA;
+
+  if (isBeforeIdella) {
+    const cd = formatCountdownFull(PRIMERA_DIANA) || { days: 0, hours: 0, mins: 0, secs: 0 };
+    container.innerHTML = `
+      <div class="pre-event-card fade-in" role="region" aria-label="Cuenta atrás para el Pasodoble Idella">
+        <p class="idella-eyebrow">⚔️ Las fiestas empiezan en</p>
+        <div class="idella-countdown" aria-live="polite" aria-atomic="true" id="idella-countdown-wrap">
+          <div class="idella-unit">
+            <span class="idella-num" id="icd-days">${pad(cd.days)}</span>
+            <span class="idella-lbl">días</span>
+          </div>
+          <span class="idella-sep" aria-hidden="true">:</span>
+          <div class="idella-unit">
+            <span class="idella-num" id="icd-hours">${pad(cd.hours)}</span>
+            <span class="idella-lbl">horas</span>
+          </div>
+          <span class="idella-sep" aria-hidden="true">:</span>
+          <div class="idella-unit">
+            <span class="idella-num" id="icd-mins">${pad(cd.mins)}</span>
+            <span class="idella-lbl">min</span>
+          </div>
+          <span class="idella-sep" aria-hidden="true">:</span>
+          <div class="idella-unit">
+            <span class="idella-num" id="icd-secs">${pad(cd.secs)}</span>
+            <span class="idella-lbl">seg</span>
+          </div>
+        </div>
+        <div class="idella-info">
+          <strong>Pasodoble Idella</strong><br>
+          Entrada de Bandas · Jueves 28 de Mayo · 19:30<br>
+          <span class="idella-director">Dir. Blanca García Rodríguez</span>
+        </div>
+      </div>`;
+  } else {
+    // Entre Idella (19:30) y la primera cena (21:00)
+    const cd = formatCountdown(firstEntry.start);
+    container.innerHTML = `
+      <div class="pre-event-card fade-in" role="region" aria-label="Cuenta atrás para la primera comida">
+        <p class="pre-event-title">¡Las fiestas ya han comenzado!</p>
+        <div class="pre-event-countdown" id="pre-countdown">${cd}</div>
+        <p class="pre-event-info">
+          Primera comida: <strong>${firstEntry.mealLabel}</strong><br>
+          ${firstEntry.dayLabel} · ${formatTime(firstEntry.start)}
+        </p>
+      </div>`;
+  }
+}
+
+// ── Post-evento ────────────────────────────────────────────
+
+function renderPostEvent(container) {
+  container.innerHTML = `
+    <div class="post-event-card fade-in" role="region" aria-label="Las fiestas han terminado">
+      <span class="post-event-emoji" aria-hidden="true">🎉</span>
+      <h2 class="post-event-title">¡Hasta el año que viene!</h2>
+      <p class="post-event-sub">Las fiestas de 2026 han concluido.<br>Nos vemos en 2027, Ziros.</p>
+    </div>`;
+}
+
+// ── Helpers de platos ─────────────────────────────────────
+
+function flattenDishes(entry) {
+  if (!entry.dishes || !entry.dishes.length) return [];
+  if (entry.dishes[0].items !== undefined) {
+    return entry.dishes.flatMap(sec => sec.items || []);
+  }
+  return entry.dishes;
+}
+
+function buildDishButton(dish, idx, entryId) {
+  return `
+      <button class="dish-item"
+              data-dish-index="${idx}"
+              data-entry-id="${entryId}"
+              aria-label="Ver información sobre ${escapeHtml(dish.name)}">
+        <span class="dish-item-dot" aria-hidden="true"></span>
+        <span class="dish-item-content">
+          <span class="dish-item-name">${escapeHtml(dish.name)}</span>
+          ${dish.desc ? `<span class="dish-item-preview">${escapeHtml(truncate(dish.desc, 60))}</span>` : ''}
+        </span>
+        <span class="dish-item-arrow" aria-hidden="true">›</span>
+      </button>`;
+}
+
+// ── Lista de platos ───────────────────────────────────────
+
+function renderDishList(entry, container, isPreview) {
+  if (!entry.dishes || !entry.dishes.length) { container.innerHTML = ''; return; }
+
+  const previewClass = isPreview ? ' preview-item' : '';
+  const tabIndex     = isPreview ? 'tabindex="-1"' : '';
+
+  const items = entry.dishes.map((dish, i) => `
+    <button class="dish-item${previewClass}"
+            ${tabIndex}
+            data-dish-index="${i}"
+            data-entry-id="${entry.id}"
+            aria-label="Ver información sobre ${dish.name}">
+      <span class="dish-item-dot" aria-hidden="true"></span>
+      <span class="dish-item-content">
+        <span class="dish-item-name">${escapeHtml(dish.name)}</span>
+        ${dish.desc ? `<span class="dish-item-preview">${escapeHtml(truncate(dish.desc, 60))}</span>` : ''}
+      </span>
+      <span class="dish-item-arrow" aria-hidden="true">›</span>
+    </button>`).join('');
+
+  container.innerHTML = `
+    <p class="dish-list-title">${isPreview ? 'Próximos platos' : 'Platos'}</p>
+    ${items}`;
+
+  if (!isPreview) {
+    container.querySelectorAll('.dish-item').forEach(btn => {
+      btn.addEventListener('click', onDishClick);
+    });
+  }
+}
+
+// ── Modal de plato ────────────────────────────────────────
+
+function onDishClick(e) {
+  const btn = e.currentTarget;
+  const entry = TIMELINE.find(t => t.id === btn.dataset.entryId);
+  if (!entry) return;
+  const dish = flattenDishes(entry)[parseInt(btn.dataset.dishIndex, 10)];
+  if (!dish) return;
+  currentFocusTrigger = btn;
+  openDishModal(dish, entry.mealType);
+}
+
+function openDishModal(dish, mealType) {
+  const modal    = document.getElementById('dish-modal');
+  const overlay  = document.getElementById('modal-overlay');
+  const nameEl   = document.getElementById('modal-dish-name');
+  const descEl   = document.getElementById('modal-dish-desc');
+  const iconEl   = document.getElementById('modal-icon');
+  const closeBtn = document.getElementById('modal-close');
+  if (!modal || !overlay) return;
+
+  nameEl.textContent = dish.name;
+  descEl.textContent = dish.desc || 'Sin descripción disponible.';
+  iconEl.textContent = MEAL_ICONS[mealType] || '🍽️';
+
+  modal.removeAttribute('hidden');
+  overlay.classList.add('visible');
+  requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('open')));
+
+  document.body.style.overflow = 'hidden';
+  closeBtn.focus();
+  modal.addEventListener('keydown', trapFocus);
+  document.addEventListener('keydown', onEscapeModal);
+}
+
+function closeDishModal() {
+  const modal   = document.getElementById('dish-modal');
+  const overlay = document.getElementById('modal-overlay');
+  if (!modal || !overlay) return;
+
+  modal.classList.remove('open');
+  overlay.classList.remove('visible');
+  modal.addEventListener('transitionend', () => modal.setAttribute('hidden', ''), { once: true });
+  document.body.style.overflow = '';
+  modal.removeEventListener('keydown', trapFocus);
+  document.removeEventListener('keydown', onEscapeModal);
+  if (currentFocusTrigger) { currentFocusTrigger.focus(); currentFocusTrigger = null; }
+}
+
+function onEscapeModal(e) { if (e.key === 'Escape') closeDishModal(); }
+
+// ── Panel de navegación ───────────────────────────────────
+
+function buildNavPanel() {
+  // Renderiza la pestaña activa
+  switchNavTab(activeNavTab, false);
+}
+
+function switchNavTab(tabId, animate) {
+  activeNavTab = tabId;
+
+  // Actualizar estado de los botones de pestaña
+  document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+    const isActive = btn.dataset.tab === tabId;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
+
+  const content = document.getElementById('nav-tab-content');
+  if (!content) return;
+
+  if (animate) content.classList.add('tab-fade');
+
+  if (tabId === 'menus')      renderTabMenus(content);
+  else if (tabId === 'programa')   renderTabPrograma(content);
+  else if (tabId === 'comparsas')  renderTabComparsas(content);
+
+  if (animate) {
+    requestAnimationFrame(() => {
+      content.classList.remove('tab-fade');
+    });
+  }
+}
+
+// ── Pestaña: Menús ────────────────────────────────────────
+
+function renderTabMenus(container) {
+  const state = getCurrentState();
+  const currentId = (viewingEntry || state.entry || state.next || {}).id || '';
+
+  const groups = {};
+  for (const entry of TIMELINE) {
+    if (!groups[entry.dayLabel]) groups[entry.dayLabel] = [];
+    groups[entry.dayLabel].push(entry);
+  }
+
+  container.innerHTML = Object.entries(groups).map(([day, entries]) => {
+    const meals = entries.map(entry => {
+      const isCurrent = entry.id === currentId;
+      return `
+        <button class="nav-meal-btn${isCurrent ? ' is-current' : ''}"
+                data-entry-id="${entry.id}"
+                aria-label="${day} — ${entry.mealLabel} (${formatTime(entry.start)})${isCurrent ? ', menú actual' : ''}">
+          <span class="nav-meal-icon" aria-hidden="true">${MEAL_ICONS[entry.mealType] || '🍽️'}</span>
+          <span class="nav-meal-name">${entry.mealLabel}</span>
+          <span class="nav-meal-time">${formatTime(entry.start)}</span>
+        </button>`;
+    }).join('');
+
+    return `
+      <div class="nav-day-group">
+        <div class="nav-day-label">${day}</div>
+        ${meals}
+      </div>`;
+  }).join('');
+
+  container.querySelectorAll('.nav-meal-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = TIMELINE.find(t => t.id === btn.dataset.entryId);
+      if (entry) { setViewingEntry(entry); closeNavPanel(); }
+    });
+  });
+}
+
+// ── Pestaña: Programa ─────────────────────────────────────
+
+function renderTabPrograma(container) {
+  const now = new Date();
+
+  container.innerHTML = EVENTOS.map(day => {
+    const evts = day.events.map(evt => {
+      const isPast    = evt.datetime < now;
+      const isUpcoming = !isPast && (evt.datetime - now) < 3600000; // próxima hora
+      const orderBadge = evt.order
+        ? `<span class="ev-order-badge order-${evt.order.toLowerCase()}" title="Orden de marcha ${evt.order}">Orden ${evt.order}</span>`
+        : '';
+      return `
+        <div class="ev-item${isPast ? ' ev-past' : ''}${evt.highlight ? ' ev-highlight' : ''}${isUpcoming ? ' ev-upcoming' : ''}">
+          <div class="ev-time">${evt.time}</div>
+          <div class="ev-body">
+            <div class="ev-name">${escapeHtml(evt.name)}</div>
+            <div class="ev-desc">${escapeHtml(evt.desc)}</div>
+            ${orderBadge}
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="ev-day-group">
+        <div class="ev-day-label">${day.dayLabel}</div>
+        ${evts}
+      </div>`;
+  }).join('');
+}
+
+// ── Pestaña: Comparsas ────────────────────────────────────
+
+function renderTabComparsas(container) {
+  const orders = Object.entries(COMPARSA_ORDERS).map(([key, order]) => {
+    const bandos = order.bandos.map(bando => {
+      const items = bando.comparsas.map(comp => {
+        const isOwn = comp === OWN_COMPARSA;
+        return `<li class="comparsa-item${isOwn ? ' comparsa-own' : ''}" ${isOwn ? 'aria-label="' + comp + ' — nuestra comparsa"' : ''}>
+          ${isOwn ? '<span class="comparsa-star" aria-hidden="true">★</span>' : '<span class="comparsa-num" aria-hidden="true">›</span>'}
+          ${escapeHtml(comp)}
+          ${isOwn ? '<span class="comparsa-tag">Ziros</span>' : ''}
+        </li>`;
+      }).join('');
+
+      return `
+        <div class="bando-block bando-${bando.id}">
+          <div class="bando-header">${escapeHtml(bando.name)}</div>
+          <ol class="comparsa-list">${items}</ol>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="order-block">
+        <div class="order-header">
+          <span class="order-letter">${key}</span>
+          <span class="order-label">${order.label}</span>
+        </div>
+        ${bandos}
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="comparsa-intro">
+      <p>Comparsa propia: <strong class="own-highlight">Moros Marroquíes</strong> (Bando Moro)</p>
+    </div>
+    ${orders}`;
+}
+
+// ── Abrir / cerrar nav panel ──────────────────────────────
+
+function openNavPanel() {
+  const panel   = document.getElementById('nav-panel');
+  const overlay = document.getElementById('nav-overlay');
+  const toggle  = document.getElementById('nav-toggle');
+  if (!panel || !overlay) return;
+
+  buildNavPanel();
+  panel.removeAttribute('hidden');
+  overlay.classList.add('visible');
+  requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('open')));
+
+  toggle.setAttribute('aria-expanded', 'true');
+  document.body.style.overflow = 'hidden';
+
+  const closeBtn = document.getElementById('nav-close');
+  if (closeBtn) closeBtn.focus();
+  panel.addEventListener('keydown', trapFocusNav);
+  document.addEventListener('keydown', onEscapeNav);
+}
+
+function closeNavPanel() {
+  const panel   = document.getElementById('nav-panel');
+  const overlay = document.getElementById('nav-overlay');
+  const toggle  = document.getElementById('nav-toggle');
+  if (!panel || !overlay) return;
+
+  panel.classList.remove('open');
+  overlay.classList.remove('visible');
+  panel.addEventListener('transitionend', () => panel.setAttribute('hidden', ''), { once: true });
+  toggle.setAttribute('aria-expanded', 'false');
+  document.body.style.overflow = '';
+  panel.removeEventListener('keydown', trapFocusNav);
+  document.removeEventListener('keydown', onEscapeNav);
+  toggle.focus();
+}
+
+function onEscapeNav(e) { if (e.key === 'Escape') closeNavPanel(); }
+
+// ── Modo manual / automático ──────────────────────────────
+
+function setViewingEntry(entry) {
+  viewingEntry = entry;
+  const banner = document.getElementById('live-mode-banner');
+  if (banner) banner.removeAttribute('hidden');
+  renderState();
+}
+
+function backToLive() {
+  viewingEntry = null;
+  const banner = document.getElementById('live-mode-banner');
+  if (banner) banner.setAttribute('hidden', '');
+  renderState();
+}
+
+// ── Trampa de foco (accesibilidad) ───────────────────────
+
+function getFocusable(el) {
+  return [...el.querySelectorAll(
+    'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  )];
+}
+
+function trapFocus(e) {
+  if (e.key !== 'Tab') return;
+  const modal = document.getElementById('dish-modal');
+  if (!modal) return;
+  const focusable = getFocusable(modal);
+  if (!focusable.length) return;
+  if (e.shiftKey) {
+    if (document.activeElement === focusable[0]) { e.preventDefault(); focusable[focusable.length - 1].focus(); }
+  } else {
+    if (document.activeElement === focusable[focusable.length - 1]) { e.preventDefault(); focusable[0].focus(); }
+  }
+}
+
+function trapFocusNav(e) {
+  if (e.key !== 'Tab') return;
+  const panel = document.getElementById('nav-panel');
+  if (!panel) return;
+  const focusable = getFocusable(panel);
+  if (!focusable.length) return;
+  if (e.shiftKey) {
+    if (document.activeElement === focusable[0]) { e.preventDefault(); focusable[focusable.length - 1].focus(); }
+  } else {
+    if (document.activeElement === focusable[focusable.length - 1]) { e.preventDefault(); focusable[0].focus(); }
+  }
+}
+
+// ── Utilidades ────────────────────────────────────────────
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function truncate(str, max) {
+  if (str.length <= max) return str;
+  return str.slice(0, max).trimEnd() + '…';
+}
+
+// ── Tick: cada segundo ────────────────────────────────────
+
+function tick() {
+  renderCurrentTime();
+
+  if (viewingEntry) return;
+
+  const state = getCurrentState();
+  const now   = new Date();
+
+  // Cuenta atrás a Idella (con segundos)
+  if (state.type === 'pre-event' && now < PRIMERA_DIANA) {
+    const cd = formatCountdownFull(PRIMERA_DIANA);
+    if (cd) {
+      const d = document.getElementById('icd-days');
+      const h = document.getElementById('icd-hours');
+      const m = document.getElementById('icd-mins');
+      const s = document.getElementById('icd-secs');
+      if (d) d.textContent = pad(cd.days);
+      if (h) h.textContent = pad(cd.hours);
+      if (m) m.textContent = pad(cd.mins);
+      if (s) s.textContent = pad(cd.secs);
+    }
+    return;
+  }
+
+  // Cuenta atrás entre-comidas (sin segundos)
+  if (state.type === 'between' || (state.type === 'pre-event' && now >= PRIMERA_DIANA)) {
+    const target = state.next.start;
+    const el = document.getElementById('countdown-value') || document.getElementById('pre-countdown');
+    if (el) el.textContent = formatCountdown(target);
+  }
+
+  // Barra de progreso comida activa
+  if (state.type === 'active') {
+    const fill  = document.querySelector('.progress-fill');
+    const label = document.querySelector('.progress-label');
+    if (fill)  fill.style.width = `${getProgress(state.entry).toFixed(1)}%`;
+    if (label) label.textContent = getTimeRemaining(state.entry) || '';
+  }
+}
+
+// ── Refresco completo si cambia el estado ─────────────────
+
+let lastStateKey = '';
+
+function fullRefresh() {
+  if (viewingEntry) return;
+  const state = getCurrentState();
+  const key   = state.type + (state.entry || state.next || {}).id || '';
+  if (key !== lastStateKey) {
+    lastStateKey = key;
+    renderState();
+  }
+}
+
+// ── Swipe to close ────────────────────────────────────────
+
+function setupSwipeDown(elementId, closeCallback) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  let startY = 0;
+  el.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+  el.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - startY > 60) closeCallback(); }, { passive: true });
+}
+
+// ── Inicialización ────────────────────────────────────────
+
+function init() {
+  renderState();
+  tick();
+
+  setInterval(tick, 1000);
+  setInterval(fullRefresh, 30000);
+
+  // Top-nav acceso rápido
+  document.querySelectorAll('.top-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeNavTab = btn.dataset.tab;
+      openNavPanel();
+    });
+  });
+
+  // Nav panel
+  document.getElementById('nav-toggle').addEventListener('click', openNavPanel);
+  document.getElementById('nav-close').addEventListener('click', closeNavPanel);
+  document.getElementById('nav-overlay').addEventListener('click', closeNavPanel);
+
+  // Pestañas del panel
+  document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchNavTab(btn.dataset.tab, true));
+  });
+
+  // Modal de plato
+  document.getElementById('modal-close').addEventListener('click', closeDishModal);
+  document.getElementById('modal-overlay').addEventListener('click', closeDishModal);
+
+  // Volver al modo automático
+  document.getElementById('back-to-live').addEventListener('click', backToLive);
+
+  // Gestos táctiles
+  setupSwipeDown('dish-modal', closeDishModal);
+  setupSwipeDown('nav-panel', closeNavPanel);
+}
+
+document.addEventListener('DOMContentLoaded', init);

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="description" content="Menús de las Fiestas de Moros y Cristianos de Elda 2026 — Cuartelillo Ziros, La Alkazaba">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ziros">
+  <title>Ziros — La Alkazaba · Elda 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Acceso directo al contenido para lectores de pantalla -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <!-- ── CABECERA ─────────────────────────────────────────── -->
+  <header id="app-header" role="banner">
+    <div class="ornament-band" aria-hidden="true"></div>
+    <div class="header-inner">
+      <div class="header-emblem" aria-hidden="true">⚔️</div>
+      <h1 class="header-title">ZIROS</h1>
+      <p class="header-subtitle">La Alkazaba</p>
+      <p class="header-event">Moros y Cristianos · Elda 2026</p>
+    </div>
+    <div class="ornament-band" aria-hidden="true"></div>
+  </header>
+
+  <!-- ── BARRA DE NAVEGACIÓN SUPERIOR ─────────────────────── -->
+  <nav class="top-nav" aria-label="Navegación rápida">
+    <button class="top-nav-btn" data-tab="menus" aria-label="Ver menús de la semana">
+      <span class="top-nav-icon" aria-hidden="true">🍽</span>
+      <span>Menús</span>
+    </button>
+    <button class="top-nav-btn" data-tab="programa" aria-label="Ver programa de actos">
+      <span class="top-nav-icon" aria-hidden="true">📅</span>
+      <span>Programa</span>
+    </button>
+    <button class="top-nav-btn" data-tab="comparsas" aria-label="Ver órdenes de comparsas">
+      <span class="top-nav-icon" aria-hidden="true">⚔️</span>
+      <span>Comparsas</span>
+    </button>
+  </nav>
+
+  <!-- ── CONTENIDO PRINCIPAL ──────────────────────────────── -->
+  <main id="main-content">
+
+    <!-- Hora actual -->
+    <div id="current-time"
+         class="current-time"
+         role="status"
+         aria-label="Hora actual"
+         aria-live="off"></div>
+
+    <!-- Menú del momento (actualizado por JS) -->
+    <section id="meal-display"
+             aria-live="polite"
+             aria-atomic="true"
+             aria-label="Menú del momento">
+    </section>
+
+    <!-- Lista de platos -->
+    <section id="dish-list"
+             aria-label="Platos del menú">
+    </section>
+
+    <!-- Banner de modo exploración (oculto por defecto) -->
+    <div id="live-mode-banner" class="live-mode-banner" hidden>
+      <button id="back-to-live"
+              class="btn-secondary"
+              aria-label="Volver al menú actual según la hora">
+        ↩ Volver al inicio
+      </button>
+    </div>
+
+    <!-- Botón para abrir panel de todos los menús -->
+    <div class="browse-btn-wrap">
+      <button id="nav-toggle"
+              class="browse-btn"
+              aria-expanded="false"
+              aria-controls="nav-panel"
+              aria-label="Ver todos los menús de la semana">
+        <span aria-hidden="true">🗓</span>
+        Ver todos los menús
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ── PIE DE PÁGINA ─────────────────────────────────────── -->
+  <footer class="app-footer" role="contentinfo">
+    <p>Cuartelillo Ziros · La Alkazaba · Elda</p>
+  </footer>
+
+  <!-- ── PANEL DE NAVEGACIÓN ──────────────────────────────── -->
+  <div id="nav-overlay"
+       class="overlay nav-overlay"
+       aria-hidden="true"
+       tabindex="-1"></div>
+
+  <nav id="nav-panel"
+       class="nav-panel"
+       role="navigation"
+       aria-label="Panel de navegación de las fiestas"
+       aria-modal="true"
+       hidden>
+    <!-- Cabecera con botón cerrar -->
+    <div class="nav-panel-header">
+      <h2 class="nav-panel-title">ZIROS · Elda 2026</h2>
+      <button id="nav-close"
+              class="btn-icon"
+              aria-label="Cerrar panel">
+        ✕
+      </button>
+    </div>
+
+    <!-- Pestañas de navegación -->
+    <div class="nav-tabs" role="tablist" aria-label="Secciones del panel">
+      <button class="nav-tab-btn active"
+              role="tab"
+              aria-selected="true"
+              aria-controls="nav-tab-content"
+              data-tab="menus">
+        🍽 Menús
+      </button>
+      <button class="nav-tab-btn"
+              role="tab"
+              aria-selected="false"
+              aria-controls="nav-tab-content"
+              data-tab="programa">
+        📅 Programa
+      </button>
+      <button class="nav-tab-btn"
+              role="tab"
+              aria-selected="false"
+              aria-controls="nav-tab-content"
+              data-tab="comparsas">
+        ⚔️ Comparsas
+      </button>
+    </div>
+
+    <!-- Contenido de la pestaña activa (rellenado por JS) -->
+    <div id="nav-tab-content" class="nav-tab-content" role="tabpanel"></div>
+  </nav>
+
+  <!-- ── MODAL DE PLATO (bottom sheet) ────────────────────── -->
+  <div id="modal-overlay"
+       class="overlay modal-overlay"
+       aria-hidden="true"
+       tabindex="-1"></div>
+
+  <div id="dish-modal"
+       class="dish-modal"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="modal-dish-name"
+       hidden>
+    <div class="modal-handle" aria-hidden="true"></div>
+    <button id="modal-close"
+            class="btn-icon modal-close-btn"
+            aria-label="Cerrar información del plato">
+      ✕
+    </button>
+    <div class="modal-body">
+      <div class="modal-icon" id="modal-icon" aria-hidden="true"></div>
+      <h2 id="modal-dish-name" class="modal-title"></h2>
+      <div class="modal-divider" aria-hidden="true"></div>
+      <p id="modal-dish-desc" class="modal-desc"></p>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

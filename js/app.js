@@ -266,7 +266,17 @@ function renderPreEvent(firstEntry, container) {
           Entrada de Bandas · Jueves 28 de Mayo · 19:30<br>
           <span class="idella-director">Dir. Blanca García Rodríguez</span>
         </div>
+        <button class="idella-lyrics-btn" id="idella-lyrics-btn" aria-label="Ver letra del Pasodoble Idella">
+          🎵 Ver letra de Idella
+        </button>
       </div>`;
+
+    const idellaEvt = EVENTOS.flatMap(d => d.events).find(e => e.lyrics);
+    if (idellaEvt) {
+      const btn = document.getElementById('idella-lyrics-btn');
+      if (btn) btn.addEventListener('click', () => openLyricsModal(idellaEvt));
+    }
+
   } else {
     // Entre Idella (19:30) y la primera cena (21:00)
     const cd = formatCountdown(firstEntry.start);
@@ -364,6 +374,34 @@ function onDishClick(e) {
   openDishModal(dish, entry.mealType);
 }
 
+function openLyricsModal(evt) {
+  const modal    = document.getElementById('dish-modal');
+  const overlay  = document.getElementById('modal-overlay');
+  const nameEl   = document.getElementById('modal-dish-name');
+  const descEl   = document.getElementById('modal-dish-desc');
+  const iconEl   = document.getElementById('modal-icon');
+  const closeBtn = document.getElementById('modal-close');
+  if (!modal || !overlay) return;
+
+  modal.classList.add('lyrics-mode');
+  iconEl.textContent = '🎵';
+  nameEl.textContent = 'Idella';
+
+  const stanzasHTML = evt.lyrics.map(stanza =>
+    `<div class="lyrics-stanza">${stanza.map(line => `<p class="lyrics-line">${escapeHtml(line)}</p>`).join('')}</div>`
+  ).join('');
+  descEl.innerHTML = `<div class="lyrics-body">${stanzasHTML}</div>`;
+
+  modal.removeAttribute('hidden');
+  overlay.classList.add('visible');
+  requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('open')));
+
+  document.body.style.overflow = 'hidden';
+  closeBtn.focus();
+  modal.addEventListener('keydown', trapFocus);
+  document.addEventListener('keydown', onEscapeModal);
+}
+
 function openDishModal(dish, mealType) {
   const modal    = document.getElementById('dish-modal');
   const overlay  = document.getElementById('modal-overlay');
@@ -392,7 +430,7 @@ function closeDishModal() {
   const overlay = document.getElementById('modal-overlay');
   if (!modal || !overlay) return;
 
-  modal.classList.remove('open');
+  modal.classList.remove('open', 'lyrics-mode');
   overlay.classList.remove('visible');
   modal.addEventListener('transitionend', () => modal.setAttribute('hidden', ''), { once: true });
   document.body.style.overflow = '';
@@ -487,13 +525,17 @@ function renderTabMenus(container) {
 function renderTabPrograma(container) {
   const now = new Date();
 
-  container.innerHTML = EVENTOS.map(day => {
-    const evts = day.events.map(evt => {
+  container.innerHTML = EVENTOS.map((day, dayIdx) => {
+    const evts = day.events.map((evt, evtIdx) => {
       const isPast     = evt.datetime < now;
       const isUpcoming = !isPast && (evt.datetime - now) < 3600000;
       const hasOrder   = !!evt.order;
+      const hasLyrics  = !!evt.lyrics;
       const orderBadge = hasOrder
         ? `<span class="ev-order-badge order-${evt.order.toLowerCase()}">Orden ${evt.order} · Ver detalles →</span>`
+        : '';
+      const lyricsBadge = hasLyrics
+        ? `<button class="ev-lyrics-btn" data-day-idx="${dayIdx}" data-evt-idx="${evtIdx}" aria-label="Ver letra de Idella">🎵 Ver letra de Idella</button>`
         : '';
       const orderAttrs = hasOrder
         ? `data-order="${evt.order}" role="button" tabindex="0" aria-label="${escapeHtml(evt.name)} — Ver Orden ${evt.order}"`
@@ -505,6 +547,7 @@ function renderTabPrograma(container) {
             <div class="ev-name">${escapeHtml(evt.name)}</div>
             <div class="ev-desc">${escapeHtml(evt.desc)}</div>
             ${orderBadge}
+            ${lyricsBadge}
           </div>
         </div>`;
     }).join('');
@@ -520,6 +563,14 @@ function renderTabPrograma(container) {
     item.addEventListener('click', () => showComparsa(item.dataset.order));
     item.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showComparsa(item.dataset.order); }
+    });
+  });
+
+  container.querySelectorAll('.ev-lyrics-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const evt = EVENTOS[+btn.dataset.dayIdx].events[+btn.dataset.evtIdx];
+      openLyricsModal(evt);
     });
   });
 }

@@ -1141,6 +1141,89 @@ body {
   cursor: pointer;
 }
 
+/* Botón "Ver letra de Idella" — pantalla principal */
+.idella-lyrics-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+  padding: 0.6rem 1.4rem;
+  background: rgba(200, 168, 75, 0.12);
+  border: 1.5px solid rgba(200, 168, 75, 0.4);
+  border-radius: 100px;
+  color: var(--gold-bright);
+  font-family: var(--font-body);
+  font-size: clamp(0.88rem, 3.5vw, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  min-height: 48px;
+  transition: background var(--transition), border-color var(--transition), transform 0.15s ease;
+}
+.idella-lyrics-btn:hover,
+.idella-lyrics-btn:focus-visible {
+  background: rgba(200, 168, 75, 0.22);
+  border-color: var(--gold);
+  transform: scale(1.03);
+  outline: none;
+}
+
+/* Botón "Ver letra de Idella" — dentro del programa */
+.ev-lyrics-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(200, 168, 75, 0.12);
+  border: 1px solid rgba(200, 168, 75, 0.35);
+  border-radius: 100px;
+  color: var(--gold-bright);
+  font-family: var(--font-body);
+  font-size: clamp(0.72rem, 2.8vw, 0.82rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  min-height: 36px;
+}
+.ev-lyrics-btn:hover,
+.ev-lyrics-btn:focus-visible {
+  background: rgba(200, 168, 75, 0.22);
+  border-color: var(--gold);
+  outline: none;
+}
+
+/* Modal en modo letra */
+.lyrics-mode .modal-body {
+  padding-bottom: 2rem;
+}
+.lyrics-mode #modal-dish-name {
+  font-size: clamp(1.8rem, 8vw, 2.6rem);
+  letter-spacing: 0.3em;
+}
+.lyrics-mode #modal-icon {
+  font-size: 2rem;
+}
+.lyrics-body {
+  text-align: center;
+}
+.lyrics-stanza {
+  margin-bottom: 1.4rem;
+}
+.lyrics-stanza:last-child {
+  margin-bottom: 0;
+}
+.lyrics-line {
+  font-family: var(--font-body);
+  font-size: clamp(0.9rem, 3.6vw, 1rem);
+  line-height: 1.7;
+  color: var(--text);
+  margin: 0;
+  font-style: italic;
+}
+
 .ev-item.ev-has-order:hover {
   background: rgba(255, 255, 255, 0.04);
 }

@@ -71,7 +71,51 @@ const EVENTOS = [
         name: 'Entrada de Bandas',
         desc: 'El Pasodoble Idella. El momento en que te recorre el cuerpo de arriba abajo. Al que diga que no se le ponen los pelos de punta le miramos muy raro.',
         order: null,
-        highlight: true
+        highlight: true,
+        lyrics: [
+          ['Idella de mis amores.'],
+          [
+            'Que viva la fiesta, que vivan los Moros y los Cristianos de mi ciudad.',
+            'Que viva mi pueblo ahora que cantamos todos juntos con ilusión.',
+            'Ya llegó la fiesta a las calles de ELDA con alegría y esplendor.',
+            'Ahora que cantamos y juntos estamos con mucha emoción.',
+          ],
+          [
+            'Que viva la fiesta, que vivan los Moros y los Cristianos de mi ciudad.',
+            'Que viva mi pueblo ahora que cantamos todos juntos con ilusión.',
+            'Ya llegó la fiesta a las calles de ELDA con alegría y esplendor.',
+            'Ahora que cantamos y juntos estamos con mucha emoción.',
+          ],
+          [
+            'Con la música estás / muy cerca del corazón.',
+            'En la Ermita de San Antón / con todas nuestras comparsas.',
+            'De la ermita de San Antón / desfilando hacia el castillo.',
+            'Con el sol y las estrellas de mi Idella natal.',
+          ],
+          [
+            'Con la música estás / muy cerca del corazón.',
+            'En la Ermita de San Antón / con todas nuestras comparsas.',
+            'De la ermita de San Antón / desfilando hacia el castillo.',
+            'Con el sol y las estrellas de mi Idella natal.',
+          ],
+          [
+            'Que viva la fiesta, que vivan los Moros y los Cristianos de mi ciudad.',
+            'Que viva mi pueblo ahora que cantamos todos juntos con ilusión.',
+            'Ya llegó la fiesta a las calles de Elda con alegría y esplendor.',
+            'Ahora que cantamos y juntos estamos con mucha emoción.',
+          ],
+          ['Idella de mis amores.'],
+          [
+            'Idella es, la tradición de una ciudad.',
+            'Idella es, el frenesí de una pasión.',
+            'Idella es, la bandera de la cruz, y la media luna, que se funden con amor.',
+          ],
+          [
+            'Idella es, la tradición de una ciudad.',
+            'Idella es, el frenesí de una pasión.',
+            'Idella es, la bandera de la cruz, y la media luna, que se funden con amor.',
+          ],
+        ]
       },
       {
         time: '23:30',

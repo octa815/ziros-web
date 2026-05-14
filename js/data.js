@@ -809,3 +809,166 @@ const TIMELINE = [
   },
 
 ];
+
+// ── LOGROS ────────────────────────────────────────────────
+
+const ACHIEVEMENTS = [
+  {
+    id: 'bienvenido',
+    icon: '🎉',
+    name: 'Primer Paso',
+    desc: 'Primera visita a Ziros 2026. ¡Que vivan las fiestas!',
+  },
+  {
+    id: 'madrugador',
+    icon: '🌅',
+    name: 'Madrugador',
+    desc: 'Conectado antes de las 9:00. El desayuno no te espera.',
+  },
+  {
+    id: 'noctambulo',
+    icon: '🌙',
+    name: 'Noctámbulo',
+    desc: 'Conectado después de las 23:30. Elda nunca duerme.',
+  },
+  {
+    id: 'superviviente',
+    icon: '💀',
+    name: 'Superviviente',
+    desc: 'Abierto en la madrugada del jueves (00:00–03:00). Eres un crack.',
+  },
+  {
+    id: 'fiel',
+    icon: '🔥',
+    name: 'Fiel a Ziros',
+    desc: 'Conectado 3 días diferentes de fiesta. El cuartelillo es tu casa.',
+  },
+  {
+    id: 'veterano',
+    icon: '⭐',
+    name: 'Veterano',
+    desc: '5 visitas o más al cuartelillo. Eres de los nuestros.',
+  },
+  {
+    id: 'adicto',
+    icon: '💫',
+    name: 'Adicto al cuartel',
+    desc: '10 visitas o más. Esto ya es preocupante (en el buen sentido).',
+  },
+  {
+    id: 'fin_de_fiesta',
+    icon: '😢',
+    name: 'Se acabó',
+    desc: 'Conectado el lunes de cierre. Hasta el año que viene.',
+  },
+  {
+    id: 'easter',
+    icon: '🥚',
+    name: 'Curioso',
+    desc: 'Encontraste el easter egg. No es fácil, pero tú lo conseguiste.',
+  },
+];
+
+// ── SALUDOS POR DÍA ───────────────────────────────────────
+
+const DAILY_GREETINGS = {
+  before: [
+    '¡Las fiestas están a la vuelta de la esquina!',
+    '⏳ Contando los días para Elda...',
+    '🏰 Ziros te espera en La Alkazaba',
+  ],
+  '2026-05-28': [
+    '🎺 ¡Hoy empieza todo! Esta noche, Idella.',
+    '⚔️ Jueves de emociones. La espera ha terminado.',
+    '🔥 Primera noche de fiesta. ¡A por todas!',
+  ],
+  '2026-05-29': [
+    '💪 ¡Viernes guerrero! El cuerpo aguanta.',
+    '🎶 Viernes de Moros y Cristianos. Qué lujo.',
+    '🌅 Buenos días, Ziro. Hoy hay mucho que vivir.',
+  ],
+  '2026-05-30': [
+    '🎊 ¡Sábado grande! El día más largo del año.',
+    '🔥 Sábado de fiesta a tope. No bajes el ritmo.',
+    '⚔️ Sábado de Moros y Cristianos. ¡A disfrutar!',
+  ],
+  '2026-05-31': [
+    '🌞 ¡Domingo de fiestas! Quedan energías.',
+    '💃 Domingo de marcha. El cuerpo pide más.',
+    '🏰 Domingo en La Alkazaba. Sigue el ritmo.',
+  ],
+  '2026-06-01': [
+    '😢 Último día... Pero qué último día.',
+    '🏆 Lunes de cierre. Hasta aquí ha llegado todo.',
+    '🎶 El último baile del año. Que sea memorable.',
+  ],
+  after: [
+    '🌟 ¡Qué fiestas tan increíbles! Hasta el 2027.',
+    '😭 Se acabó, pero qué recuerdos.',
+    '🔥 Ya queda menos para las fiestas de 2027.',
+  ],
+};
+
+// ── QUINIELA DIARIA ───────────────────────────────────────
+
+const POLL_DAYS = {
+  '2026-05-28': {
+    question: '¿Cuántos repetirán en la cena de hoy?',
+    options: ['Todos sin excepción', 'La mayoría, claro', 'Los más valientes', 'Repetir es de sabios'],
+  },
+  '2026-05-29': {
+    question: '¿Cuántos kilos de carrillera caerán hoy?',
+    options: ['Menos de 10 kg', '10–20 kg', '20–30 kg', 'Perdemos la cuenta'],
+  },
+  '2026-05-30': {
+    question: '¿Cuándo empieza "de verdad" el sábado?',
+    options: ['Desde el almuerzo', 'Desde la comida', 'Desde la cena', 'Desde la madrugada'],
+  },
+  '2026-05-31': {
+    question: '¿Quién tiene más energía este domingo?',
+    options: ['Los jóvenes del grupo', 'Los veteranos', 'El cocinero', 'La banda de música'],
+  },
+  '2026-06-01': {
+    question: '¿En cuánto tiempo empezamos a echar de menos las fiestas?',
+    options: ['Ya las echo de menos', 'En unas horas', 'Mañana por la mañana', 'Nunca se van'],
+  },
+};
+
+// ── MAPA INTERACTIVO ──────────────────────────────────────
+// Actualiza las coordenadas [lat, lng] con las ubicaciones exactas
+// (puedes buscarlas en Google Maps con clic derecho → "¿Qué hay aquí?")
+
+const MAP_CENTER = [38.4776, -0.7976];
+const MAP_ZOOM   = 15;
+
+const MAP_LOCATIONS = [
+  {
+    id: 'cuartelillo',
+    name: 'Cuartelillo Ziros — La Alkazaba',
+    coords: [38.4808, -0.7997], // ← Actualiza con las coordenadas reales
+    icon: '🏰',
+    desc: 'Nuestro cuartelillo durante las fiestas de 2026',
+    own: true,
+  },
+  {
+    id: 'castillo',
+    name: 'Castillo de Elda',
+    coords: [38.4818, -0.8005],
+    icon: '🏯',
+    desc: 'Castillo histórico de Elda',
+  },
+  {
+    id: 'ayuntamiento',
+    name: 'Ayuntamiento de Elda',
+    coords: [38.4751, -0.7973],
+    icon: '🏛️',
+    desc: 'Plaza del Ayuntamiento · Corazón del desfile',
+  },
+  {
+    id: 'parque',
+    name: 'Parque Municipal',
+    coords: [38.4760, -0.7985],
+    icon: '🌳',
+    desc: 'Zona de concentración de comparsas',
+  },
+];

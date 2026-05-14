@@ -1,7 +1,7 @@
 // Service Worker — Ziros 2026
 // Estrategia: cache-first para activos estáticos, network-first para datos
 
-const CACHE_NAME = 'ziros-2026-v1';
+const CACHE_NAME = 'ziros-2026-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

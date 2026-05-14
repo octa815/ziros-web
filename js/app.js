@@ -5,11 +5,26 @@
 
 'use strict';
 
+// ── LocalStorage ──────────────────────────────────────────
+const LS_WELCOMED     = 'ziros26_welcomed';
+const LS_VISITS       = 'ziros26_visits';
+const LS_ACHIEVEMENTS = 'ziros26_achievements';
+const LS_POLL         = 'ziros26_poll';
+
+function lsGet(key, def) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; }
+}
+function lsSet(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
 // ── Estado ────────────────────────────────────────────────
-let viewingEntry      = null;
+let viewingEntry        = null;
 let currentFocusTrigger = null;
-let activeNavTab      = 'menus';
-let vibeInterval      = null;
+let activeNavTab        = 'menus';
+let vibeInterval        = null;
+let activeTrophyTab     = 'logros';
+let mapInstance         = null;
 
 // ── Mensajes motivadores por tipo de comida ───────────────
 const VIBES = {
@@ -20,6 +35,21 @@ const VIBES = {
   madrugada: ['🌟 Los valientes quedan en pie', '🦉 Mañana ya descansarás', '🎊 La madrugada es para los elegidos', '🔥 Todavía queda fiesta', '🌙 Elda nunca duerme'],
   default:   ['🎉 Que vivan los Moros y Cristianos', '🏰 Ziros en La Alkazaba', '⚔️ Por la tradición de Elda'],
 };
+
+// ── Simulación de tiempo (dev) ────────────────────────────
+
+let _devOffset = 0;
+function simNow() { return new Date(Date.now() + _devOffset); }
+
+function simulateLastMinute() {
+  _devOffset = PRIMERA_DIANA.getTime() - 60000 - Date.now();
+  renderState();
+}
+
+function resetSimulation() {
+  _devOffset = 0;
+  renderState();
+}
 
 // ── Utilidades de tiempo ──────────────────────────────────
 
@@ -38,7 +68,7 @@ function formatCurrentTime(date) {
 
 // Cuenta atrás compacta (sin segundos)
 function formatCountdown(targetDate) {
-  const diff = targetDate - new Date();
+  const diff = targetDate - simNow();
   if (diff <= 0) return '¡Ya!';
   const totalSecs = Math.floor(diff / 1000);
   const days  = Math.floor(totalSecs / 86400);
@@ -51,7 +81,7 @@ function formatCountdown(targetDate) {
 
 // Cuenta atrás detallada con segundos (para Idella)
 function formatCountdownFull(targetDate) {
-  const diff = targetDate - new Date();
+  const diff = targetDate - simNow();
   if (diff <= 0) return null; // Ha pasado
   const totalSecs = Math.floor(diff / 1000);
   const days  = Math.floor(totalSecs / 86400);
@@ -62,14 +92,14 @@ function formatCountdownFull(targetDate) {
 }
 
 function getProgress(entry) {
-  const now   = new Date();
+  const now   = simNow();
   const total = entry.end - entry.start;
   const elapsed = now - entry.start;
   return Math.min(100, Math.max(0, (elapsed / total) * 100));
 }
 
 function getTimeRemaining(entry) {
-  const diff = entry.end - new Date();
+  const diff = entry.end - simNow();
   if (diff <= 0) return null;
   const totalMins = Math.ceil(diff / 60000);
   const hours = Math.floor(totalMins / 60);
@@ -81,7 +111,7 @@ function getTimeRemaining(entry) {
 // ── Cálculo del estado ────────────────────────────────────
 
 function getCurrentState() {
-  const now = new Date();
+  const now = simNow();
   for (const entry of TIMELINE) {
     if (now >= entry.start && now < entry.end) {
       return { type: 'active', entry };
@@ -97,7 +127,7 @@ function getCurrentState() {
 
 function renderCurrentTime() {
   const el = document.getElementById('current-time');
-  if (el) el.textContent = formatCurrentTime(new Date());
+  if (el) el.textContent = formatCurrentTime(simNow());
 }
 
 // ── Renderizado principal ─────────────────────────────────
@@ -273,7 +303,7 @@ function startVibeRotation(entry) {
 // ── Pre-evento: cuenta atrás al Pasodoble Idella ──────────
 
 function renderPreEvent(firstEntry, container) {
-  const now = new Date();
+  const now = simNow();
   const isBeforeIdella = now < PRIMERA_DIANA;
 
   if (isBeforeIdella) {
@@ -310,6 +340,7 @@ function renderPreEvent(firstEntry, container) {
         <button class="idella-lyrics-btn" id="idella-lyrics-btn" aria-label="Ver letra del Pasodoble Idella">
           🎵 Ver letra de Idella
         </button>
+        ${_devOffset === 0 ? `<button class="sim-btn" id="sim-last-minute-btn" aria-label="Simular último minuto antes de Idella">🎬 Simular último minuto</button>` : `<button class="sim-btn sim-btn-reset" id="sim-reset-btn" aria-label="Volver a tiempo real">⏹ Detener simulación</button>`}
       </div>`;
 
     const idellaEvt = EVENTOS.flatMap(d => d.events).find(e => e.lyrics);
@@ -317,6 +348,15 @@ function renderPreEvent(firstEntry, container) {
       const btn = document.getElementById('idella-lyrics-btn');
       if (btn) btn.addEventListener('click', () => openLyricsModal(idellaEvt));
     }
+
+    const simBtn   = document.getElementById('sim-last-minute-btn');
+    const resetBtn = document.getElementById('sim-reset-btn');
+    if (simBtn)   simBtn.addEventListener('click', simulateLastMinute);
+    if (resetBtn) resetBtn.addEventListener('click', resetSimulation);
+
+    // Reproductor de audio
+    const card = container.querySelector('.pre-event-card');
+    if (card) injectAudioPlayer(card);
 
   } else {
     // Entre Idella (19:30) y la primera cena (21:00)
@@ -488,12 +528,13 @@ function buildNavPanel() {
   switchNavTab(activeNavTab, false);
 }
 
-const TAB_ORDER = ['menus', 'programa', 'comparsas'];
+const TAB_ORDER = ['menus', 'programa', 'comparsas', 'mapa'];
 
 function renderTabContent(tabId, container) {
   if (tabId === 'menus')          renderTabMenus(container);
   else if (tabId === 'programa')  renderTabPrograma(container);
   else if (tabId === 'comparsas') renderTabComparsas(container);
+  else if (tabId === 'mapa')      renderTabMapa(container);
 }
 
 function switchNavTab(tabId, animate) {
@@ -565,7 +606,7 @@ function renderTabMenus(container) {
 // ── Pestaña: Programa ─────────────────────────────────────
 
 function renderTabPrograma(container) {
-  const now = new Date();
+  const now = simNow();
 
   container.innerHTML = EVENTOS.map((day, dayIdx) => {
     const evts = day.events.map((evt, evtIdx) => {
@@ -615,6 +656,80 @@ function renderTabPrograma(container) {
       openLyricsModal(evt);
     });
   });
+}
+
+// ── Pestaña: Mapa ─────────────────────────────────────────
+
+function renderTabMapa(container) {
+  if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+
+  if (typeof L === 'undefined') {
+    container.innerHTML = `<p class="map-unavailable">🗺️ Mapa no disponible sin conexión a internet</p>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="map-wrap">
+      <div id="festival-map" class="festival-map" role="img" aria-label="Mapa del festival Moros y Cristianos de Elda"></div>
+      <p class="map-hint">📍 Toca los marcadores para ver cada ubicación · La brújula en azul es tu posición GPS</p>
+    </div>`;
+
+  setTimeout(() => {
+    const mapEl = document.getElementById('festival-map');
+    if (!mapEl) return;
+
+    mapInstance = L.map('festival-map', {
+      center: MAP_CENTER,
+      zoom: MAP_ZOOM,
+      zoomControl: true,
+      attributionControl: true,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
+      maxZoom: 19,
+      subdomains: 'abcd',
+    }).addTo(mapInstance);
+
+    MAP_LOCATIONS.forEach(loc => {
+      const inner = `<div class="map-marker-inner${loc.own ? ' map-marker-own' : ''}">${loc.icon}</div>`;
+      const icon = L.divIcon({
+        className: 'map-marker-wrap',
+        html: inner,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+        popupAnchor: [0, -24],
+      });
+
+      const marker = L.marker(loc.coords, { icon }).addTo(mapInstance);
+      marker.bindPopup(
+        `<div class="map-popup"><strong>${escapeHtml(loc.name)}</strong>${loc.desc ? `<span>${escapeHtml(loc.desc)}</span>` : ''}</div>`,
+        { maxWidth: 200 }
+      );
+      if (loc.own) marker.openPopup();
+    });
+
+    // Botón de geolocalización
+    if (navigator.geolocation) {
+      const geoBtn = L.control({ position: 'topright' });
+      geoBtn.onAdd = () => {
+        const btn = L.DomUtil.create('button', 'map-geo-btn');
+        btn.title = 'Mi ubicación';
+        btn.innerHTML = '📍';
+        L.DomEvent.on(btn, 'click', L.DomEvent.stopPropagation);
+        btn.addEventListener('click', () => {
+          navigator.geolocation.getCurrentPosition(pos => {
+            mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 17);
+            L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
+              radius: 8, color: '#4a90e2', fillColor: '#4a90e2', fillOpacity: 0.8, weight: 2,
+            }).addTo(mapInstance).bindPopup('Tu ubicación').openPopup();
+          });
+        });
+        return btn;
+      };
+      geoBtn.addTo(mapInstance);
+    }
+  }, 350);
 }
 
 // ── Ir directamente a un orden de marcha ──────────────────
@@ -718,6 +833,8 @@ function closeNavPanel() {
   const overlay = document.getElementById('nav-overlay');
   const toggle  = document.getElementById('nav-toggle');
   if (!panel || !overlay) return;
+
+  if (mapInstance) { mapInstance.remove(); mapInstance = null; }
 
   panel.classList.remove('open', 'panel-open');
   overlay.classList.remove('visible');
@@ -823,7 +940,7 @@ function tick() {
   if (viewingEntry) return;
 
   const state = getCurrentState();
-  const now   = new Date();
+  const now   = simNow();
 
   // Cuenta atrás a Idella (con segundos)
   if (state.type === 'pre-event' && now < PRIMERA_DIANA) {
@@ -878,6 +995,313 @@ function fullRefresh() {
 }
 
 // ── Swipe to close ────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════
+//  WELCOME · GREETING · ACHIEVEMENTS · STATS · POLL · AUDIO
+// ══════════════════════════════════════════════════════════
+
+// ── Bienvenida (primera visita) ───────────────────────────
+
+function showWelcome() {
+  if (lsGet(LS_WELCOMED, false)) return;
+  const el = document.getElementById('welcome-screen');
+  if (!el) return;
+  el.removeAttribute('hidden');
+  fireConfetti();
+  const close = () => closeWelcome();
+  document.getElementById('welcome-close').addEventListener('click', close);
+  el.addEventListener('click', e => { if (e.target === el) close(); });
+  setTimeout(close, 9000);
+}
+
+function closeWelcome() {
+  const el = document.getElementById('welcome-screen');
+  if (!el || el.hasAttribute('hidden')) return;
+  el.classList.add('welcome-exit');
+  setTimeout(() => { el.setAttribute('hidden', ''); el.classList.remove('welcome-exit'); }, 500);
+  lsSet(LS_WELCOMED, true);
+  unlockAchievement('bienvenido');
+}
+
+// ── Saludo personalizado por día ──────────────────────────
+
+function renderDailyGreeting() {
+  const el = document.getElementById('daily-greeting');
+  if (!el) return;
+  const now  = new Date();
+  const key  = now.toISOString().slice(0, 10);
+  let msgs;
+  if (now < new Date('2026-05-28T00:00:00'))      msgs = DAILY_GREETINGS.before;
+  else if (now > new Date('2026-06-01T23:59:59')) msgs = DAILY_GREETINGS.after;
+  else msgs = DAILY_GREETINGS[key] || DAILY_GREETINGS.before;
+  el.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+}
+
+// ── Visitas y logros ──────────────────────────────────────
+
+function trackVisit() {
+  const visits = lsGet(LS_VISITS, []);
+  const now    = new Date();
+  visits.push({ ts: now.getTime() });
+  lsSet(LS_VISITS, visits.slice(-200));
+  checkAchievements(now, visits);
+}
+
+function checkAchievements(now, visits) {
+  const h = now.getHours();
+  const dateStr = now.toISOString().slice(0, 10);
+
+  if (h < 9)   unlockAchievement('madrugador');
+  if (h >= 23 || h < 3) unlockAchievement('noctambulo');
+  if (dateStr === '2026-05-29' && h < 3) unlockAchievement('superviviente');
+  if (dateStr === '2026-06-01') unlockAchievement('fin_de_fiesta');
+  if (visits.length >= 5)  unlockAchievement('veterano');
+  if (visits.length >= 10) unlockAchievement('adicto');
+
+  const festDays = new Set(
+    visits
+      .map(v => new Date(v.ts).toISOString().slice(0, 10))
+      .filter(d => d >= '2026-05-28' && d <= '2026-06-01')
+  );
+  if (festDays.size >= 3) unlockAchievement('fiel');
+}
+
+function unlockAchievement(id) {
+  const unlocked = lsGet(LS_ACHIEVEMENTS, []);
+  if (unlocked.includes(id)) return;
+  unlocked.push(id);
+  lsSet(LS_ACHIEVEMENTS, unlocked);
+  const ach = ACHIEVEMENTS.find(a => a.id === id);
+  if (ach) showAchievementToast(ach);
+}
+
+function showAchievementToast(ach) {
+  const toast = document.getElementById('achievement-toast');
+  if (!toast) return;
+  document.getElementById('toast-icon').textContent  = ach.icon;
+  document.getElementById('toast-title').textContent = `🏆 ${ach.name}`;
+  document.getElementById('toast-desc').textContent  = ach.desc;
+  toast.removeAttribute('hidden');
+  toast.classList.add('toast-in');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.classList.remove('toast-in');
+    setTimeout(() => toast.setAttribute('hidden', ''), 400);
+  }, 4000);
+}
+
+// ── Modal de trofeos ──────────────────────────────────────
+
+function openTrophiesModal() {
+  const modal   = document.getElementById('trophies-modal');
+  const overlay = document.getElementById('trophies-overlay');
+  if (!modal || !overlay) return;
+  renderTrophiesTab(activeTrophyTab);
+  modal.removeAttribute('hidden');
+  overlay.classList.add('visible');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    modal.classList.add('open');
+    modal.classList.add('panel-open');
+  }));
+  document.body.style.overflow = 'hidden';
+  document.getElementById('trophies-close').focus();
+}
+
+function closeTrophiesModal() {
+  const modal   = document.getElementById('trophies-modal');
+  const overlay = document.getElementById('trophies-overlay');
+  if (!modal) return;
+  modal.classList.remove('open', 'panel-open');
+  overlay.classList.remove('visible');
+  modal.addEventListener('transitionend', () => modal.setAttribute('hidden', ''), { once: true });
+  document.body.style.overflow = '';
+  document.getElementById('trophies-toggle')?.focus();
+}
+
+function switchTrophyTab(tabId) {
+  activeTrophyTab = tabId;
+  document.querySelectorAll('[data-trophy-tab]').forEach(btn => {
+    const active = btn.dataset.trophyTab === tabId;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  renderTrophiesTab(tabId);
+}
+
+function renderTrophiesTab(tabId) {
+  const container = document.getElementById('trophies-content');
+  if (!container) return;
+  if (tabId === 'logros') renderLogros(container);
+  else                    renderStats(container);
+}
+
+function renderLogros(container) {
+  const unlocked = lsGet(LS_ACHIEVEMENTS, []);
+  const html = ACHIEVEMENTS.map(ach => {
+    const isUnlocked = unlocked.includes(ach.id);
+    return `
+      <div class="trophy-item${isUnlocked ? ' trophy-unlocked' : ' trophy-locked'}">
+        <span class="trophy-icon">${ach.icon}</span>
+        <div class="trophy-body">
+          <span class="trophy-name">${escapeHtml(ach.name)}</span>
+          <span class="trophy-desc">${escapeHtml(ach.desc)}</span>
+        </div>
+        ${isUnlocked ? '<span class="trophy-check">✓</span>' : '<span class="trophy-lock">🔒</span>'}
+      </div>`;
+  }).join('');
+  container.innerHTML = `<div class="trophies-list">${html}</div>`;
+}
+
+function renderStats(container) {
+  const visits  = lsGet(LS_VISITS, []);
+  const unlocked = lsGet(LS_ACHIEVEMENTS, []);
+
+  if (!visits.length) {
+    container.innerHTML = `<p class="stats-empty">Aún no hay datos. ¡Vuelve durante las fiestas!</p>`;
+    return;
+  }
+
+  const festVisits = visits.filter(v => {
+    const d = new Date(v.ts).toISOString().slice(0, 10);
+    return d >= '2026-05-28' && d <= '2026-06-01';
+  });
+  const festDays = new Set(festVisits.map(v => new Date(v.ts).toISOString().slice(0, 10)));
+  const hours    = visits.map(v => new Date(v.ts).getHours());
+  const earliest = Math.min(...hours);
+  const latest   = Math.max(...hours);
+  const nightVisits = visits.filter(v => { const h = new Date(v.ts).getHours(); return h >= 23 || h < 5; }).length;
+
+  const pad2 = n => String(n).padStart(2, '0');
+  const fmt  = h => `${pad2(h)}:00`;
+
+  container.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-num">${visits.length}</span>
+        <span class="stat-lbl">visitas totales</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">${festDays.size}</span>
+        <span class="stat-lbl">días de fiesta</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">${fmt(earliest)}</span>
+        <span class="stat-lbl">hora más temprana</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">${fmt(latest)}</span>
+        <span class="stat-lbl">hora más tardía</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">${nightVisits}</span>
+        <span class="stat-lbl">visitas nocturnas</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">${unlocked.length}/${ACHIEVEMENTS.length}</span>
+        <span class="stat-lbl">logros</span>
+      </div>
+    </div>`;
+}
+
+// ── Quiniela del día ──────────────────────────────────────
+
+function renderPoll() {
+  const section = document.getElementById('poll-section');
+  if (!section) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const poll  = POLL_DAYS[today];
+  if (!poll) { section.setAttribute('hidden', ''); return; }
+
+  const saved   = lsGet(LS_POLL, {});
+  const answered = saved[today] !== undefined;
+
+  if (answered) {
+    section.removeAttribute('hidden');
+    section.innerHTML = `
+      <div class="poll-card poll-done">
+        <p class="poll-answered">¡Ya has votado hoy! 🎉</p>
+        <p class="poll-voted-choice">Tu respuesta: <strong>${escapeHtml(poll.options[saved[today]])}</strong></p>
+      </div>`;
+    return;
+  }
+
+  section.removeAttribute('hidden');
+  const opts = poll.options.map((opt, i) =>
+    `<button class="poll-opt" data-idx="${i}">${escapeHtml(opt)}</button>`
+  ).join('');
+  section.innerHTML = `
+    <div class="poll-card">
+      <p class="poll-eyebrow">🗳️ Quiniela del día</p>
+      <p class="poll-question">${escapeHtml(poll.question)}</p>
+      <div class="poll-options">${opts}</div>
+    </div>`;
+
+  section.querySelectorAll('.poll-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = +btn.dataset.idx;
+      const s   = lsGet(LS_POLL, {});
+      s[today]  = idx;
+      lsSet(LS_POLL, s);
+      renderPoll();
+      unlockAchievement('fiel');
+    });
+  });
+}
+
+// ── Reproductor de audio ──────────────────────────────────
+
+function injectAudioPlayer(container) {
+  const existing = document.getElementById('idella-audio-player');
+  if (existing) return;
+
+  const div = document.createElement('div');
+  div.className = 'audio-player';
+  div.id = 'idella-audio-player';
+  div.innerHTML = `
+    <audio id="idella-audio" src="assets/idella.mp3" preload="none"></audio>
+    <button class="audio-play-btn" id="audio-play-btn" aria-label="Reproducir Pasodoble Idella">
+      <span class="audio-play-icon" id="audio-play-icon">▶</span>
+    </button>
+    <div class="audio-info">
+      <span class="audio-title">Pasodoble Idella</span>
+      <div class="audio-bar-wrap">
+        <div class="audio-bar" id="audio-bar">
+          <div class="audio-progress" id="audio-progress-fill"></div>
+        </div>
+        <span class="audio-time" id="audio-time">0:00</span>
+      </div>
+    </div>`;
+  container.appendChild(div);
+
+  const audio   = document.getElementById('idella-audio');
+  const playBtn = document.getElementById('audio-play-btn');
+  const icon    = document.getElementById('audio-play-icon');
+  const fill    = document.getElementById('audio-progress-fill');
+  const timeEl  = document.getElementById('audio-time');
+  const bar     = document.getElementById('audio-bar');
+
+  playBtn.addEventListener('click', () => {
+    if (audio.paused) { audio.play().catch(() => {}); } else { audio.pause(); }
+  });
+  audio.addEventListener('play',  () => { icon.textContent = '⏸'; playBtn.setAttribute('aria-label', 'Pausar'); });
+  audio.addEventListener('pause', () => { icon.textContent = '▶'; playBtn.setAttribute('aria-label', 'Reproducir Pasodoble Idella'); });
+  audio.addEventListener('ended', () => { icon.textContent = '▶'; fill.style.width = '0%'; timeEl.textContent = '0:00'; });
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    fill.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+    const m = Math.floor(audio.currentTime / 60);
+    const s = Math.floor(audio.currentTime % 60);
+    timeEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  });
+  bar.addEventListener('click', e => {
+    if (!audio.duration) return;
+    audio.currentTime = (e.offsetX / bar.offsetWidth) * audio.duration;
+  });
+  audio.addEventListener('error', () => {
+    div.innerHTML = `<p class="audio-unavailable">🎵 Pasodoble Idella — audio próximamente</p>`;
+  });
+}
 
 function setupSwipeDown(elementId, closeCallback) {
   const el = document.getElementById(elementId);
@@ -965,6 +1389,7 @@ function setupEasterEgg() {
     if (taps >= 5) {
       taps = 0;
       fireConfetti();
+      unlockAchievement('easter');
     }
   });
 }
@@ -992,11 +1417,17 @@ function init() {
   createEmbers();
   setupRipples();
   setupEasterEgg();
+  trackVisit();
+  renderDailyGreeting();
+  renderPoll();
   renderState();
   tick();
 
   setInterval(tick, 1000);
   setInterval(fullRefresh, 30000);
+
+  // Bienvenida primera visita (pequeño retardo para que cargue la UI)
+  setTimeout(showWelcome, 600);
 
   // Top-nav acceso rápido
   document.querySelectorAll('.top-nav-btn').forEach(btn => {
@@ -1020,12 +1451,21 @@ function init() {
   document.getElementById('modal-close').addEventListener('click', closeDishModal);
   document.getElementById('modal-overlay').addEventListener('click', closeDishModal);
 
+  // Modal de trofeos
+  document.getElementById('trophies-toggle').addEventListener('click', openTrophiesModal);
+  document.getElementById('trophies-close').addEventListener('click', closeTrophiesModal);
+  document.getElementById('trophies-overlay').addEventListener('click', closeTrophiesModal);
+  document.querySelectorAll('[data-trophy-tab]').forEach(btn => {
+    btn.addEventListener('click', () => switchTrophyTab(btn.dataset.trophyTab));
+  });
+
   // Volver al modo automático
   document.getElementById('back-to-live').addEventListener('click', backToLive);
 
   // Gestos táctiles
   setupSwipeDown('dish-modal', closeDishModal);
   setupSwipeDown('nav-panel', closeNavPanel);
+  setupSwipeDown('trophies-modal', closeTrophiesModal);
 }
 
 document.addEventListener('DOMContentLoaded', init);

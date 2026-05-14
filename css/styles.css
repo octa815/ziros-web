@@ -2279,4 +2279,170 @@ body.mode-madrugada .header-title {
 }
 .map-geo-btn:hover { background: var(--surface-2) !important; }
 
+/* ── 44. PANTALLA IDELLA (full-screen takeover) ──────────── */
+@keyframes idella-bg-pulse {
+  0%, 100% { opacity: 0.18; }
+  50%       { opacity: 0.32; }
+}
+@keyframes idella-title-in {
+  from { opacity: 0; transform: scale(0.85) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes idella-content-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.idella-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: #060d1a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+.idella-screen[hidden] { display: none; }
+.idella-screen.idella-open  { opacity: 1; }
+.idella-screen.idella-exit  { opacity: 0; pointer-events: none; }
+
+/* fondo animado */
+.idella-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%,   rgba(180,0,30,0.28) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 50% 100%,  rgba(200,168,75,0.12) 0%, transparent 70%);
+  animation: idella-bg-pulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.idella-screen-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.idella-screen-hero {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 2.5rem 1.5rem 1.8rem;
+  border-bottom: 1px solid rgba(200,168,75,0.12);
+}
+
+.idella-screen-eyebrow {
+  font-size: clamp(0.72rem, 3vw, 0.85rem);
+  color: var(--red-light);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+  animation: idella-content-in 0.8s 0.2s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.idella-screen-title {
+  font-family: var(--font-title);
+  font-size: clamp(4rem, 20vw, 8rem);
+  letter-spacing: 0.22em;
+  line-height: 1;
+  margin: 0 0 0.3rem;
+  background: linear-gradient(90deg,
+    var(--gold-dim) 0%,
+    var(--gold-bright) 40%,
+    #fff8d0 55%,
+    var(--gold-bright) 70%,
+    var(--gold-dim) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation:
+    idella-title-in 1s 0.1s cubic-bezier(0.22,1,0.36,1) both,
+    title-shimmer  3s 1.1s linear infinite;
+}
+
+.idella-screen-sub {
+  font-size: clamp(0.78rem, 3.2vw, 0.92rem);
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 1.2rem;
+  animation: idella-content-in 0.8s 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+#idella-screen-audio-wrap .audio-player {
+  max-width: 380px;
+  margin: 0 auto;
+  animation: idella-content-in 0.8s 0.55s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* Letras — más grandes y centradas */
+.idella-screen-lyrics {
+  flex: 1;
+  padding: 2rem 1.5rem 1.5rem;
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
+  animation: idella-content-in 0.8s 0.7s cubic-bezier(0.22,1,0.36,1) both;
+}
+.idella-screen-lyrics .lyrics-stanza {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.idella-screen-lyrics .lyrics-line {
+  font-size: clamp(1.05rem, 4.5vw, 1.35rem);
+  line-height: 1.9;
+  color: var(--text);
+}
+.idella-screen-lyrics .lyrics-stanza:first-child .lyrics-line {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: clamp(0.9rem, 3.8vw, 1.1rem);
+}
+
+/* Footer con botón saltar */
+.idella-screen-footer {
+  flex-shrink: 0;
+  padding: 1rem 1.5rem 1.8rem;
+  text-align: center;
+  background: linear-gradient(to bottom, transparent 0%, rgba(6,13,26,0.97) 40%);
+  position: sticky;
+  bottom: 0;
+  animation: idella-content-in 0.8s 0.9s cubic-bezier(0.22,1,0.36,1) both;
+}
+.idella-skip-btn {
+  padding: 0.7rem 1.8rem;
+  background: rgba(200,168,75,0.08);
+  border: 1.5px solid rgba(200,168,75,0.3);
+  border-radius: 100px;
+  color: var(--gold-dim);
+  font-family: var(--font-body);
+  font-size: clamp(0.82rem, 3.2vw, 0.95rem);
+  cursor: pointer;
+  min-height: 48px;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+.idella-skip-btn:hover {
+  background: rgba(200,168,75,0.16);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* prefers-reduced-motion: no pulsar fondo */
+@media (prefers-reduced-motion: reduce) {
+  .idella-screen::before { animation: none; opacity: 0.2; }
+  .idella-screen-title,
+  .idella-screen-eyebrow,
+  .idella-screen-sub,
+  .idella-screen-footer,
+  .idella-screen-lyrics,
+  #idella-screen-audio-wrap .audio-player { animation: none; opacity: 1; transform: none; }
+}
 

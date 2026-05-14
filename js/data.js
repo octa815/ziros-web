@@ -5,6 +5,8 @@
 
 // Momento especial del inicio de las fiestas (cuenta atrás principal)
 const PRIMERA_DIANA = new Date('2026-05-28T19:30:00');
+// Fin de la actuación de Idella — cuando la app vuelve al flujo normal
+const IDELLA_END    = new Date('2026-05-28T19:40:00');
 
 // ── LETRAS DE CANCIONES ────────────────────────────────────
 

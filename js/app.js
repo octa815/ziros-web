@@ -42,12 +42,15 @@ let _devOffset = 0;
 function simNow() { return new Date(Date.now() + _devOffset); }
 
 function simulateLastMinute() {
-  _devOffset = PRIMERA_DIANA.getTime() - 60000 - Date.now();
+  _idellaShownInSession = false; // permitir que la pantalla vuelva a aparecer
+  _devOffset = PRIMERA_DIANA.getTime() - 2 * 60000 - Date.now(); // T-2 min
   renderState();
 }
 
 function resetSimulation() {
   _devOffset = 0;
+  _idellaShownInSession = false;
+  closeIdellaScreen();
   renderState();
 }
 
@@ -942,6 +945,17 @@ function tick() {
   const state = getCurrentState();
   const now   = simNow();
 
+  // ── Detección de pantalla Idella ──────────────────────────
+  if (!idellaScreenActive && now >= PRIMERA_DIANA && now < IDELLA_END) {
+    showIdellaScreen();
+    return;
+  }
+  if (idellaScreenActive && now >= IDELLA_END) {
+    closeIdellaScreen();
+    return;
+  }
+  if (idellaScreenActive) return; // pantalla activa — no tocar más UI
+
   // Cuenta atrás a Idella (con segundos)
   if (state.type === 'pre-event' && now < PRIMERA_DIANA) {
     const cd = formatCountdownFull(PRIMERA_DIANA);
@@ -1251,35 +1265,35 @@ function renderPoll() {
 
 // ── Reproductor de audio ──────────────────────────────────
 
-function injectAudioPlayer(container) {
-  const existing = document.getElementById('idella-audio-player');
-  if (existing) return;
+function injectAudioPlayer(container, prefix = 'idella') {
+  const pid = `${prefix}-audio-player`;
+  if (document.getElementById(pid)) return;
 
   const div = document.createElement('div');
   div.className = 'audio-player';
-  div.id = 'idella-audio-player';
+  div.id = pid;
   div.innerHTML = `
-    <audio id="idella-audio" src="assets/idella.mp3" preload="none"></audio>
-    <button class="audio-play-btn" id="audio-play-btn" aria-label="Reproducir Pasodoble Idella">
-      <span class="audio-play-icon" id="audio-play-icon">▶</span>
+    <audio id="${prefix}-audio" src="assets/idella.mp3" preload="none"></audio>
+    <button class="audio-play-btn" id="${prefix}-play-btn" aria-label="Reproducir Pasodoble Idella">
+      <span class="audio-play-icon" id="${prefix}-play-icon">▶</span>
     </button>
     <div class="audio-info">
       <span class="audio-title">Pasodoble Idella</span>
       <div class="audio-bar-wrap">
-        <div class="audio-bar" id="audio-bar">
-          <div class="audio-progress" id="audio-progress-fill"></div>
+        <div class="audio-bar" id="${prefix}-bar">
+          <div class="audio-progress" id="${prefix}-progress-fill"></div>
         </div>
-        <span class="audio-time" id="audio-time">0:00</span>
+        <span class="audio-time" id="${prefix}-time">0:00</span>
       </div>
     </div>`;
   container.appendChild(div);
 
-  const audio   = document.getElementById('idella-audio');
-  const playBtn = document.getElementById('audio-play-btn');
-  const icon    = document.getElementById('audio-play-icon');
-  const fill    = document.getElementById('audio-progress-fill');
-  const timeEl  = document.getElementById('audio-time');
-  const bar     = document.getElementById('audio-bar');
+  const audio   = div.querySelector('audio');
+  const playBtn = div.querySelector('.audio-play-btn');
+  const icon    = div.querySelector('.audio-play-icon');
+  const fill    = div.querySelector('.audio-progress');
+  const timeEl  = div.querySelector('.audio-time');
+  const bar     = div.querySelector('.audio-bar');
 
   playBtn.addEventListener('click', () => {
     if (audio.paused) { audio.play().catch(() => {}); } else { audio.pause(); }
@@ -1301,6 +1315,68 @@ function injectAudioPlayer(container) {
   audio.addEventListener('error', () => {
     div.innerHTML = `<p class="audio-unavailable">🎵 Pasodoble Idella — audio próximamente</p>`;
   });
+}
+
+// ── Pantalla Idella (full-screen takeover) ────────────────
+
+let idellaScreenActive = false;
+let _idellaShownInSession = false;
+
+function showIdellaScreen() {
+  if (idellaScreenActive || _idellaShownInSession) return;
+  idellaScreenActive = true;
+  _idellaShownInSession = true;
+
+  const screen = document.getElementById('idella-screen');
+  if (!screen) return;
+
+  // Inyectar letra
+  const idellaEvt = EVENTOS.flatMap(d => d.events).find(e => e.lyricsTitle === 'Idella');
+  const lyricsEl  = document.getElementById('idella-screen-lyrics');
+  if (idellaEvt && lyricsEl) {
+    lyricsEl.innerHTML = idellaEvt.lyrics.map(stanza =>
+      `<div class="lyrics-stanza">${stanza.map(l => `<p class="lyrics-line">${escapeHtml(l)}</p>`).join('')}</div>`
+    ).join('');
+  }
+
+  // Inyectar reproductor propio (prefijo distinto para no colisionar)
+  const audioWrap = document.getElementById('idella-screen-audio-wrap');
+  if (audioWrap) injectAudioPlayer(audioWrap, 'idella-screen');
+
+  // Mostrar
+  screen.removeAttribute('hidden');
+  document.body.style.overflow = 'hidden';
+  document.body.classList.remove('drama-mode');
+  requestAnimationFrame(() => requestAnimationFrame(() => screen.classList.add('idella-open')));
+
+  document.getElementById('idella-skip-btn')?.addEventListener('click', skipIdella, { once: true });
+}
+
+function closeIdellaScreen(jumpTo) {
+  if (!idellaScreenActive) return;
+  idellaScreenActive = false;
+
+  // Pausar audio si estaba sonando
+  const audio = document.querySelector('#idella-screen-audio-wrap audio');
+  if (audio) audio.pause();
+
+  const screen = document.getElementById('idella-screen');
+  if (!screen) return;
+
+  screen.classList.add('idella-exit');
+  screen.classList.remove('idella-open');
+  setTimeout(() => {
+    screen.setAttribute('hidden', '');
+    screen.classList.remove('idella-exit');
+    document.body.style.overflow = '';
+    if (jumpTo) _devOffset = jumpTo - Date.now();
+    renderState();
+  }, 700);
+}
+
+function skipIdella() {
+  // Saltar a 19:41 (un minuto después del fin de la actuación)
+  closeIdellaScreen(IDELLA_END.getTime() + 60000);
 }
 
 function setupSwipeDown(elementId, closeCallback) {

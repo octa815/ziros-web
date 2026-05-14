@@ -1,7 +1,9 @@
 // Service Worker — Ziros 2026
-// Estrategia: cache-first para activos estáticos, network-first para datos
+// Estrategia: cache-first para activos estáticos + tiles de mapa
 
-const CACHE_NAME = 'ziros-2026-v2';
+const CACHE_NAME      = 'ziros-2026-v3';
+const TILES_CACHE     = 'ziros-map-tiles-v1';
+
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,6 +11,8 @@ const STATIC_ASSETS = [
   '/js/data.js',
   '/js/app.js',
   '/assets/ziros_logo.png',
+  '/assets/lib/leaflet.js',
+  '/assets/lib/leaflet.css',
   '/manifest.json',
 ];
 
@@ -25,19 +29,39 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+        keys
+          .filter(k => k !== CACHE_NAME && k !== TILES_CACHE)
+          .map(k => caches.delete(k))
       )
     )
   );
   self.clients.claim();
 });
 
-// ── Fetch: cache-first para activos propios ───────────────
+// ── Fetch ─────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Solo interceptar peticiones del mismo origen
+  // Tiles de CartoDB — cache-first, guardar cuando haya red
+  if (url.hostname.endsWith('basemaps.cartocdn.com')) {
+    event.respondWith(
+      caches.open(TILES_CACHE).then(cache =>
+        cache.match(request).then(cached => {
+          if (cached) return cached;
+          return fetch(request).then(response => {
+            if (response && response.status === 200) {
+              cache.put(request, response.clone());
+            }
+            return response;
+          }).catch(() => new Response('', { status: 503 }));
+        })
+      )
+    );
+    return;
+  }
+
+  // Activos propios (mismo origen) — cache-first
   if (url.origin !== location.origin) return;
 
   event.respondWith(
@@ -45,14 +69,12 @@ self.addEventListener('fetch', event => {
       if (cached) return cached;
 
       return fetch(request).then(response => {
-        // Guardar en caché solo respuestas válidas
         if (response && response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
         }
         return response;
       }).catch(() => {
-        // Sin red y sin caché: devolver página principal como fallback
         if (request.destination === 'document') {
           return caches.match('/index.html');
         }

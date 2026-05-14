@@ -406,14 +406,21 @@ function onEscapeModal(e) { if (e.key === 'Escape') closeDishModal(); }
 // ── Panel de navegación ───────────────────────────────────
 
 function buildNavPanel() {
-  // Renderiza la pestaña activa
   switchNavTab(activeNavTab, false);
 }
 
+const TAB_ORDER = ['menus', 'programa', 'comparsas'];
+
+function renderTabContent(tabId, container) {
+  if (tabId === 'menus')          renderTabMenus(container);
+  else if (tabId === 'programa')  renderTabPrograma(container);
+  else if (tabId === 'comparsas') renderTabComparsas(container);
+}
+
 function switchNavTab(tabId, animate) {
+  const prevTab = activeNavTab;
   activeNavTab = tabId;
 
-  // Actualizar estado de los botones de pestaña
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
     const isActive = btn.dataset.tab === tabId;
     btn.classList.toggle('active', isActive);
@@ -423,16 +430,15 @@ function switchNavTab(tabId, animate) {
   const content = document.getElementById('nav-tab-content');
   if (!content) return;
 
-  if (animate) content.classList.add('tab-fade');
-
-  if (tabId === 'menus')      renderTabMenus(content);
-  else if (tabId === 'programa')   renderTabPrograma(content);
-  else if (tabId === 'comparsas')  renderTabComparsas(content);
-
-  if (animate) {
-    requestAnimationFrame(() => {
-      content.classList.remove('tab-fade');
-    });
+  if (animate && prevTab !== tabId) {
+    const fromRight = TAB_ORDER.indexOf(tabId) > TAB_ORDER.indexOf(prevTab);
+    content.classList.add(fromRight ? 'tab-from-right' : 'tab-from-left');
+    renderTabContent(tabId, content);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      content.classList.remove('tab-from-right', 'tab-from-left');
+    }));
+  } else {
+    renderTabContent(tabId, content);
   }
 }
 
@@ -487,7 +493,7 @@ function renderTabPrograma(container) {
       const isUpcoming = !isPast && (evt.datetime - now) < 3600000;
       const hasOrder   = !!evt.order;
       const orderBadge = hasOrder
-        ? `<span class="ev-order-badge order-${evt.order.toLowerCase()}">Orden ${evt.order} · Ver marcha →</span>`
+        ? `<span class="ev-order-badge order-${evt.order.toLowerCase()}">Orden ${evt.order} · Ver detalles →</span>`
         : '';
       const orderAttrs = hasOrder
         ? `data-order="${evt.order}" role="button" tabindex="0" aria-label="${escapeHtml(evt.name)} — Ver Orden ${evt.order}"`
@@ -580,7 +586,10 @@ function openNavPanel() {
   buildNavPanel();
   panel.removeAttribute('hidden');
   overlay.classList.add('visible');
-  requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('open')));
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    panel.classList.add('open');
+    panel.classList.add('panel-open');
+  }));
 
   toggle.setAttribute('aria-expanded', 'true');
   document.body.style.overflow = 'hidden';
@@ -597,7 +606,7 @@ function closeNavPanel() {
   const toggle  = document.getElementById('nav-toggle');
   if (!panel || !overlay) return;
 
-  panel.classList.remove('open');
+  panel.classList.remove('open', 'panel-open');
   overlay.classList.remove('visible');
   panel.addEventListener('transitionend', () => panel.setAttribute('hidden', ''), { once: true });
   toggle.setAttribute('aria-expanded', 'false');

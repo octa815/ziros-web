@@ -385,7 +385,7 @@ function openLyricsModal(evt) {
 
   modal.classList.add('lyrics-mode');
   iconEl.textContent = '🎵';
-  nameEl.textContent = 'Idella';
+  nameEl.textContent = evt.lyricsTitle || evt.name;
 
   const stanzasHTML = evt.lyrics.map(stanza =>
     `<div class="lyrics-stanza">${stanza.map(line => `<p class="lyrics-line">${escapeHtml(line)}</p>`).join('')}</div>`
@@ -535,7 +535,7 @@ function renderTabPrograma(container) {
         ? `<span class="ev-order-badge order-${evt.order.toLowerCase()}">Orden ${evt.order} · Ver detalles →</span>`
         : '';
       const lyricsBadge = hasLyrics
-        ? `<button class="ev-lyrics-btn" data-day-idx="${dayIdx}" data-evt-idx="${evtIdx}" aria-label="Ver letra de Idella">🎵 Ver letra de Idella</button>`
+        ? `<button class="ev-lyrics-btn" data-day-idx="${dayIdx}" data-evt-idx="${evtIdx}" aria-label="Ver letra de ${escapeHtml(evt.lyricsTitle || evt.name)}">🎵 Ver letra de ${escapeHtml(evt.lyricsTitle || evt.name)}</button>`
         : '';
       const orderAttrs = hasOrder
         ? `data-order="${evt.order}" role="button" tabindex="0" aria-label="${escapeHtml(evt.name)} — Ver Orden ${evt.order}"`

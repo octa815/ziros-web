@@ -6,6 +6,65 @@
 // Momento especial del inicio de las fiestas (cuenta atrás principal)
 const PRIMERA_DIANA = new Date('2026-05-28T19:30:00');
 
+// ── LETRAS DE CANCIONES ────────────────────────────────────
+
+const CANCION_SAN_ANTON = [
+  [
+    'Esta melodía que resuena,',
+    'llegará a todos los corazones de los festeros',
+    'de nuestro pueblo, que entusiasmados, cantan así:',
+  ],
+  [
+    'San Antón,',
+    'sale de su ermita,',
+    'cuando los Moros y Cristianos',
+    'abren su corazón,',
+    'a la fiesta de este pueblo,',
+    'hermosa tradición,',
+    'que llevamos muy adentro',
+    'fieles a nuestro Santo.',
+  ],
+  [
+    'San Antón, con su libro abierto,',
+    'observa atento a los festeros',
+    'que marchan alegres,',
+    'a disfrutar y a desfilar con las comparsas,',
+    'que embellecen nuestras calles.',
+  ],
+  [
+    'Y al llegar primeros de Junio,',
+    'el cielo azul cautivador',
+    'se vuelve multicolor,',
+    'porque sabe que ha llegado',
+    'la fiesta del patrón',
+    'de los Moros y Cristianos',
+    'de este bendito pueblo.',
+  ],
+  [
+    'San Antón, te dieron por nombre,',
+    'te suplicamos no abandones',
+    'a nuestros festeros,',
+    'porque te dan, de corazón,',
+    'muestra de afecto, de ilusión',
+    'y de alegría.',
+  ],
+  [
+    'Hay en mi pueblo un Santo Patrono,',
+    'vejete humilde con sus barbas y su pelo cano.',
+    'Es el Patrón de Moros y Cristianos,',
+    'a quien bien llaman San Antonio Abad.',
+  ],
+  [
+    'En el castillo, en la ermita, en las calles,',
+    'el chupinazo ha sonado ya,',
+    'y por el cielo suena un pasodoble,',
+    'que alegra el alma y el corazón,',
+    'y entonces el mundo entero sabe',
+    'que han llegado las Fiestas...',
+  ],
+  ['¡Que viva Elda y San Antón!'],
+];
+
 // Comparsa propia (se resaltará en las órdenes de marcha)
 const OWN_COMPARSA = 'Marroquíes';
 
@@ -72,6 +131,7 @@ const EVENTOS = [
         desc: 'El Pasodoble Idella. El momento en que te recorre el cuerpo de arriba abajo. Al que diga que no se le ponen los pelos de punta le miramos muy raro.',
         order: null,
         highlight: true,
+        lyricsTitle: 'Idella',
         lyrics: [
           ['Idella de mis amores.'],
           [
@@ -141,7 +201,9 @@ const EVENTOS = [
         datetime: new Date('2026-05-29T11:00:00'),
         name: 'Pasodoble San Antón',
         desc: 'En la iglesia de Santa Ana. Para los que todavía tienen fuerzas a las 11 del viernes. Retumba que tumba el suelo recén asfaltao',
-        order: null
+        order: null,
+        lyricsTitle: 'San Antón',
+        lyrics: CANCION_SAN_ANTON
       },
       {
         time: '19:00',
@@ -220,7 +282,9 @@ const EVENTOS = [
         datetime: new Date('2026-06-01T18:30:00'),
         name: 'Procesión en Honor a San Antonio Abad',
         desc: 'El cierre. La clausura. La mayoría aún no se sabe la letra entera, pero se emociona igual. Como cada año.',
-        order: 'C'
+        order: 'C',
+        lyricsTitle: 'San Antón',
+        lyrics: CANCION_SAN_ANTON
       }
     ]
   }

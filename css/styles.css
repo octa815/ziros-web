@@ -1384,3 +1384,118 @@ body {
   padding-top: 0.3rem;
 }
 
+/* ── 30. ANIMACIONES DINÁMICAS ───────────────────────────── */
+
+/* Logo flotante */
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0); filter: drop-shadow(0 0 10px rgba(200,168,75,0.45)); }
+  50%       { transform: translateY(-8px); filter: drop-shadow(0 6px 20px rgba(200,168,75,0.85)); }
+}
+.header-logo-img {
+  animation: logo-float 3.6s ease-in-out infinite;
+}
+
+/* Shimmer en título ZIROS */
+@keyframes title-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.header-title {
+  background: linear-gradient(90deg, var(--gold) 20%, #fff5b0 46%, #ffe55a 54%, var(--gold) 80%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: var(--gold);
+  animation: title-shimmer 3.2s linear infinite;
+}
+
+/* Ornamento band — deslizamiento continuo */
+@keyframes ornament-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 40px 0; }
+}
+.ornament-band {
+  animation: ornament-drift 2s linear infinite;
+}
+
+/* Tarjeta de comida — entrada */
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(30px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.meal-card {
+  animation: card-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Badge AHORA — pulso rojo */
+@keyframes badge-ahora-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224,37,53,0.8); }
+  60%       { box-shadow: 0 0 0 12px rgba(224,37,53,0); }
+}
+.badge-ahora {
+  animation: badge-ahora-pulse 1.8s ease-out infinite;
+}
+
+/* Platos — entrada escalonada */
+@keyframes dish-slide-in {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.dish-item {
+  animation: dish-slide-in 0.32s ease-out both;
+  animation-delay: calc(var(--i, 0) * 0.07s);
+}
+
+/* Embers flotantes */
+@keyframes ember-float {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  8%   { opacity: 1; }
+  88%  { opacity: 0.5; }
+  100% { transform: translateY(-100vh) translateX(var(--drift, 40px)); opacity: 0; }
+}
+.ember {
+  position: fixed;
+  bottom: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, opacity;
+  animation: ember-float linear infinite;
+}
+
+/* Ripple en botones */
+.dish-item,
+.nav-meal-btn,
+.top-nav-btn,
+.browse-btn {
+  position: relative;
+  overflow: hidden;
+}
+@keyframes ripple-out {
+  from { width: 0; height: 0; opacity: 0.45; transform: translate(-50%, -50%) scale(0); }
+  to   { width: 400px; height: 400px; opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+.ripple-span {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.22);
+  pointer-events: none;
+  animation: ripple-out 0.55s ease-out forwards;
+}
+
+/* Desactivar animaciones si el usuario lo prefiere */
+@media (prefers-reduced-motion: reduce) {
+  .header-logo-img,
+  .header-title,
+  .ornament-band,
+  .meal-card,
+  .badge-ahora,
+  .dish-item,
+  .ember {
+    animation: none !important;
+    -webkit-text-fill-color: unset;
+    color: var(--gold);
+  }
+}
+

@@ -306,6 +306,7 @@ function flattenDishes(entry) {
 function buildDishButton(dish, idx, entryId) {
   return `
       <button class="dish-item"
+              style="--i:${idx}"
               data-dish-index="${idx}"
               data-entry-id="${entryId}"
               aria-label="Ver información sobre ${escapeHtml(dish.name)}">
@@ -748,9 +749,63 @@ function setupSwipeDown(elementId, closeCallback) {
   }, { passive: true });
 }
 
+// ── Embers flotantes ──────────────────────────────────────
+
+function createEmbers() {
+  const colors = [
+    'rgba(200,168,75,0.7)',
+    'rgba(255,202,64,0.6)',
+    'rgba(224,37,53,0.55)',
+    'rgba(255,140,50,0.5)',
+  ];
+  for (let i = 0; i < 18; i++) {
+    const el = document.createElement('div');
+    el.className = 'ember';
+    const size = Math.random() * 4 + 2;
+    el.style.cssText = [
+      `left:${Math.random() * 100}%`,
+      `width:${size}px`,
+      `height:${size}px`,
+      `background:${colors[Math.floor(Math.random() * colors.length)]}`,
+      `--drift:${(Math.random() - 0.5) * 120}px`,
+      `animation-duration:${Math.random() * 9 + 7}s`,
+      `animation-delay:${Math.random() * 10}s`,
+    ].join(';');
+    document.body.appendChild(el);
+  }
+}
+
+// ── Efecto ripple en botones ──────────────────────────────
+
+function addRipple(el) {
+  const trigger = e => {
+    const rect = el.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const span = document.createElement('span');
+    span.className = 'ripple-span';
+    span.style.left = x + 'px';
+    span.style.top  = y + 'px';
+    el.appendChild(span);
+    span.addEventListener('animationend', () => span.remove());
+  };
+  el.addEventListener('touchstart', trigger, { passive: true });
+  el.addEventListener('click', trigger);
+}
+
+function setupRipples() {
+  document.querySelectorAll('.top-nav-btn, .browse-btn').forEach(addRipple);
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.dish-item, .nav-meal-btn');
+    if (btn) addRipple(btn);
+  });
+}
+
 // ── Inicialización ────────────────────────────────────────
 
 function init() {
+  createEmbers();
+  setupRipples();
   renderState();
   tick();
 

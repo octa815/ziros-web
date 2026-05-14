@@ -42,8 +42,9 @@ let _devOffset = 0;
 function simNow() { return new Date(Date.now() + _devOffset); }
 
 function simulateLastMinute() {
-  _idellaShownInSession = false; // permitir que la pantalla vuelva a aparecer
+  _idellaShownInSession = false;
   _devOffset = PRIMERA_DIANA.getTime() - 2 * 60000 - Date.now(); // T-2 min
+  initAudioCtx(); // activar AudioContext tras gesto de usuario
   renderState();
 }
 
@@ -52,6 +53,72 @@ function resetSimulation() {
   _idellaShownInSession = false;
   closeIdellaScreen();
   renderState();
+}
+
+// ── Web Audio (Chrome · Firefox · Safari) ────────────────
+// Regla de todos los browsers: el AudioContext DEBE crearse
+// y reanudarse dentro de (o justo después de) un gesto de usuario.
+// Safari además exige llamar a resume() explícitamente incluso
+// cuando acaba de crearse. playTone lo gestiona en cadena de Promise.
+
+let _audioCtx = null;
+
+function initAudioCtx() {
+  try {
+    if (!_audioCtx) {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    // resume() devuelve Promise — la encadenamos para no bloquear
+    if (_audioCtx.state === 'suspended') {
+      _audioCtx.resume().catch(() => {});
+    }
+  } catch (e) { _audioCtx = null; }
+}
+
+function playTone(freq, dur = 0.15, type = 'sine', vol = 0.35, delay = 0) {
+  if (!_audioCtx || _audioCtx.state === 'closed') return;
+
+  const doPlay = () => {
+    try {
+      const ctx  = _audioCtx;
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = type;
+      osc.frequency.value = freq;
+      const t0 = ctx.currentTime + Math.max(0, delay);
+      gain.gain.setValueAtTime(vol, t0);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.05);
+    } catch (e) {}
+  };
+
+  if (_audioCtx.state === 'suspended') {
+    // Safari: hay que hacer resume() y esperar antes de usar la API
+    _audioCtx.resume().then(doPlay).catch(() => {});
+  } else {
+    doPlay();
+  }
+}
+
+function playCountdownTick(secsLeft) {
+  if      (secsLeft > 10)  return;
+  else if (secsLeft >= 6)  playTone(440,  0.08, 'sine', 0.28);
+  else if (secsLeft === 5) playTone(523,  0.12, 'sine', 0.4);
+  else if (secsLeft === 4) playTone(587,  0.12, 'sine', 0.42);
+  else if (secsLeft === 3) playTone(659,  0.13, 'sine', 0.45);
+  else if (secsLeft === 2) playTone(784,  0.14, 'sine', 0.5);
+  else if (secsLeft === 1) playTone(880,  0.22, 'sine', 0.55);
+}
+
+function playIdellaFanfare() {
+  playTone(523,  0.55, 'sawtooth', 0.2,  0.0);
+  playTone(659,  0.55, 'sawtooth', 0.18, 0.0);
+  playTone(784,  0.55, 'sawtooth', 0.16, 0.0);
+  playTone(1046, 0.7,  'sawtooth', 0.22, 0.18);
+  playTone(880,  0.4,  'sine',     0.12, 0.55);
 }
 
 // ── Utilidades de tiempo ──────────────────────────────────
@@ -928,13 +995,19 @@ function animateDigit(el, newVal) {
 
 let lastVibSec = -1;
 function triggerVibration(secsLeft) {
-  if (!navigator.vibrate) return;
   if (secsLeft === lastVibSec) return;
   lastVibSec = secsLeft;
-  if (secsLeft === 60)  navigator.vibrate([200, 100, 200, 100, 400]);
-  if (secsLeft === 30)  navigator.vibrate([100, 50, 100, 50, 100]);
-  if (secsLeft === 10)  navigator.vibrate(300);
-  if (secsLeft <= 5 && secsLeft > 0) navigator.vibrate(100);
+
+  // Sonidos (Web Audio — funciona en todos los browsers)
+  playCountdownTick(secsLeft);
+
+  // Vibración (solo Android Chrome; iOS y escritorio la ignoran)
+  if (navigator.vibrate) {
+    if (secsLeft === 60)  navigator.vibrate([200, 100, 200, 100, 400]);
+    if (secsLeft === 30)  navigator.vibrate([100, 50, 100, 50, 100]);
+    if (secsLeft === 10)  navigator.vibrate(300);
+    if (secsLeft <= 5 && secsLeft > 0) navigator.vibrate(100);
+  }
 }
 
 function tick() {
@@ -1349,6 +1422,10 @@ function showIdellaScreen() {
   document.body.classList.remove('drama-mode');
   requestAnimationFrame(() => requestAnimationFrame(() => screen.classList.add('idella-open')));
 
+  // Fanfarria al abrirse
+  initAudioCtx();
+  setTimeout(playIdellaFanfare, 300); // pequeño retardo para que el fade-in sea visible
+
   document.getElementById('idella-skip-btn')?.addEventListener('click', skipIdella, { once: true });
 }
 
@@ -1489,10 +1566,24 @@ function fireConfetti() {
   }
 }
 
+function setupAudioUnlock() {
+  // Cualquier interacción del usuario desbloquea/reactiva el AudioContext.
+  // Necesario en Safari (macOS e iOS) que lo suspende agresivamente.
+  const unlock = () => {
+    if (_audioCtx && _audioCtx.state === 'suspended') {
+      _audioCtx.resume().catch(() => {});
+    }
+  };
+  document.addEventListener('click',      unlock, { passive: true });
+  document.addEventListener('touchstart', unlock, { passive: true });
+  document.addEventListener('keydown',    unlock, { passive: true });
+}
+
 function init() {
   createEmbers();
   setupRipples();
   setupEasterEgg();
+  setupAudioUnlock();
   trackVisit();
   renderDailyGreeting();
   renderPoll();

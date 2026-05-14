@@ -735,8 +735,17 @@ function setupSwipeDown(elementId, closeCallback) {
   const el = document.getElementById(elementId);
   if (!el) return;
   let startY = 0;
-  el.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
-  el.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - startY > 60) closeCallback(); }, { passive: true });
+  let allowClose = false;
+
+  el.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    const scrollable = el.querySelector('.nav-tab-content') || el;
+    allowClose = scrollable.scrollTop <= 0;
+  }, { passive: true });
+
+  el.addEventListener('touchend', e => {
+    if (allowClose && e.changedTouches[0].clientY - startY > 100) closeCallback();
+  }, { passive: true });
 }
 
 // ── Inicialización ────────────────────────────────────────

@@ -11,6 +11,7 @@
   --border:       #1e3460;
   --gold:         #c8a84b;
   --gold-light:   #e8ca76;
+  --gold-bright:  #ffca40;
   --gold-dim:     #7a6228;
   --red:          #b01020;
   --red-light:    #e02535;
@@ -113,10 +114,15 @@ body {
 }
 
 .header-emblem {
-  font-size: clamp(2rem, 8vw, 2.8rem);
-  line-height: 1;
-  margin-bottom: 0.25rem;
-  filter: drop-shadow(0 0 8px rgba(200, 168, 75, 0.6));
+  margin-bottom: 0.5rem;
+}
+
+.header-logo-img {
+  width: clamp(72px, 22vw, 120px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 10px rgba(200, 168, 75, 0.5));
 }
 
 .header-title {
@@ -141,8 +147,8 @@ body {
 }
 
 .header-event {
-  font-size: clamp(0.8rem, 3.2vw, 0.95rem);
-  color: var(--text-dim);
+  font-size: clamp(0.85rem, 3.4vw, 1rem);
+  color: var(--red-light);
   letter-spacing: 0.05em;
   margin-top: 0.15rem;
 }
@@ -151,8 +157,8 @@ body {
 .current-time {
   text-align: center;
   font-family: var(--font-title);
-  font-size: clamp(0.85rem, 3.5vw, 1rem);
-  color: var(--text-dim);
+  font-size: clamp(0.88rem, 3.5vw, 1rem);
+  color: var(--red-light);
   letter-spacing: 0.1em;
   padding: 0.6rem 1rem 0;
 }
@@ -493,7 +499,7 @@ body {
 
 /* ── 13. BOTÓN "VER TODOS LOS MENÚS" ─────────────────────── */
 .browse-btn-wrap {
-  padding: 1.25rem 1rem 0.5rem;
+  padding: 1.5rem 1rem 0.75rem;
   display: flex;
   justify-content: center;
 }
@@ -501,28 +507,33 @@ body {
 .browse-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  background: transparent;
-  border: 2px solid var(--border);
-  color: var(--text-muted);
+  justify-content: center;
+  gap: 0.6rem;
+  background: rgba(200, 168, 75, 0.1);
+  border: 2px solid var(--gold-dim);
+  color: var(--gold);
   font-family: var(--font-body);
-  font-size: clamp(0.9rem, 3.6vw, 1rem);
-  padding: 0.75rem 1.5rem;
+  font-size: clamp(1rem, 4vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1rem 2.25rem;
   border-radius: 100px;
   cursor: pointer;
   transition:
     border-color var(--transition),
     color var(--transition),
     background var(--transition);
-  min-height: 52px;
+  min-height: 60px;
+  width: 100%;
+  max-width: 340px;
   -webkit-tap-highlight-color: transparent;
 }
 
 .browse-btn:hover,
 .browse-btn:focus-visible {
-  border-color: var(--gold-dim);
-  color: var(--gold);
-  background: rgba(200, 168, 75, 0.06);
+  border-color: var(--gold);
+  color: var(--gold-light);
+  background: rgba(200, 168, 75, 0.18);
 }
 
 .browse-btn:focus-visible {
@@ -649,10 +660,11 @@ body {
 
 .nav-day-label {
   font-family: var(--font-title);
-  font-size: clamp(0.78rem, 3vw, 0.88rem);
-  letter-spacing: 0.15em;
+  font-size: clamp(0.95rem, 3.8vw, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--red-light);
   padding: 0.6rem 1.25rem 0.3rem;
 }
 
@@ -958,11 +970,12 @@ body {
 /* ── 24. CUENTA ATRÁS IDELLA ─────────────────────────────── */
 .idella-eyebrow {
   font-family: var(--font-title);
-  font-size: clamp(0.85rem, 3.4vw, 1rem);
-  color: var(--text-muted);
+  font-size: clamp(0.9rem, 3.6vw, 1.05rem);
+  color: var(--text);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: 1rem;
+  opacity: 0.8;
 }
 
 .idella-countdown {
@@ -995,8 +1008,8 @@ body {
 }
 
 .idella-lbl {
-  font-size: clamp(0.65rem, 2.5vw, 0.75rem);
-  color: var(--text-dim);
+  font-size: clamp(0.7rem, 2.8vw, 0.82rem);
+  color: var(--red-light);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-top: 0.2rem;
@@ -1030,10 +1043,11 @@ body {
 
 .ev-day-label {
   font-family: var(--font-title);
-  font-size: clamp(0.78rem, 3vw, 0.88rem);
-  letter-spacing: 0.15em;
+  font-size: clamp(0.95rem, 3.8vw, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--red-light);
   padding: 0.7rem 1.25rem 0.3rem;
 }
 

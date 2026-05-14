@@ -6,9 +6,20 @@
 'use strict';
 
 // ── Estado ────────────────────────────────────────────────
-let viewingEntry      = null; // null = auto, entry = modo manual
+let viewingEntry      = null;
 let currentFocusTrigger = null;
-let activeNavTab      = 'menus'; // 'menus' | 'programa' | 'comparsas'
+let activeNavTab      = 'menus';
+let vibeInterval      = null;
+
+// ── Mensajes motivadores por tipo de comida ───────────────
+const VIBES = {
+  almuerzo:  ['☀️ ¡Buenos días, guerrero!', '🥐 La mañana no espera', '⚡ Carga pilas para el día', '🎺 Que suene la banda'],
+  aperitivo: ['🥂 El aperitivo no se rechaza', '🫒 Las aceitunas llaman', '🎉 La fiesta está en la mesa', '💃 Tiempo de tertulia'],
+  comida:    ['🍽️ A por todas, que hay mucho menú', '🔥 Aquí se come en serio', '👨‍🍳 El cocinero lo ha dado todo', '🏆 El plato principal te espera', '🎶 Come, que el pasodoble da fuerzas'],
+  cena:      ['🌙 La cena es el alma de la fiesta', '🕯️ Noche de Ziros, noche grande', '🥩 El plato fuerte de la jornada', '✨ Los mejores momentos empiezan ahora', '🍷 Brindis pendiente'],
+  madrugada: ['🌟 Los valientes quedan en pie', '🦉 Mañana ya descansarás', '🎊 La madrugada es para los elegidos', '🔥 Todavía queda fiesta', '🌙 Elda nunca duerme'],
+  default:   ['🎉 Que vivan los Moros y Cristianos', '🏰 Ziros en La Alkazaba', '⚔️ Por la tradición de Elda'],
+};
 
 // ── Utilidades de tiempo ──────────────────────────────────
 
@@ -96,10 +107,11 @@ function renderState() {
   const dishListEl  = document.getElementById('dish-list');
   if (!mealDisplay || !dishListEl) return;
 
-  dishListEl.innerHTML = ''; // dishes live inside the meal card now
+  dishListEl.innerHTML = '';
 
   if (viewingEntry) {
     renderMealCard(viewingEntry, 'vista', mealDisplay);
+    updateMadrugadaMode(viewingEntry.mealType);
     return;
   }
 
@@ -107,17 +119,25 @@ function renderState() {
   switch (state.type) {
     case 'active':
       renderMealCard(state.entry, 'ahora', mealDisplay);
+      updateMadrugadaMode(state.entry.mealType);
       break;
     case 'between':
       renderMealCard(state.next, 'proxima', mealDisplay);
+      updateMadrugadaMode(null);
       break;
     case 'pre-event':
       renderPreEvent(state.next, mealDisplay);
+      updateMadrugadaMode(null);
       break;
     case 'post-event':
       renderPostEvent(mealDisplay);
+      updateMadrugadaMode(null);
       break;
   }
+}
+
+function updateMadrugadaMode(mealType) {
+  document.body.classList.toggle('mode-madrugada', mealType === 'madrugada');
 }
 
 // ── Tarjeta de comida ─────────────────────────────────────
@@ -136,13 +156,16 @@ function renderMealCard(entry, mode, container) {
   if (isActive) {
     const pct = getProgress(entry).toFixed(1);
     const rem = getTimeRemaining(entry) || '';
+    const msgs = VIBES[entry.mealType] || VIBES.default;
+    const firstMsg = msgs[Math.floor(Math.random() * msgs.length)];
     timeExtra = `
       <div class="progress-wrap">
         <div class="progress-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso de la comida">
           <div class="progress-fill" style="width:${pct}%"></div>
         </div>
         <span class="progress-label">${rem}</span>
-      </div>`;
+      </div>
+      <div class="meal-vibe" id="meal-vibe" aria-live="off">${firstMsg}</div>`;
   } else if (isUpcoming) {
     const cd = formatCountdown(entry.start);
     timeExtra = `
@@ -227,6 +250,24 @@ function renderMealCard(entry, mode, container) {
       btn.addEventListener('click', onDishClick);
     });
   }
+
+  if (isActive) startVibeRotation(entry);
+}
+
+function startVibeRotation(entry) {
+  if (vibeInterval) clearInterval(vibeInterval);
+  const msgs = VIBES[entry.mealType] || VIBES.default;
+  let i = 0;
+  vibeInterval = setInterval(() => {
+    const el = document.getElementById('meal-vibe');
+    if (!el) { clearInterval(vibeInterval); return; }
+    i = (i + 1) % msgs.length;
+    el.classList.add('vibe-fade');
+    setTimeout(() => {
+      el.textContent = msgs[i];
+      el.classList.remove('vibe-fade');
+    }, 300);
+  }, 5000);
 }
 
 // ── Pre-evento: cuenta atrás al Pasodoble Idella ──────────
@@ -466,6 +507,7 @@ function switchNavTab(tabId, animate) {
   });
 
   const content = document.getElementById('nav-tab-content');
+  if (content) content.setAttribute('aria-labelledby', `tab-btn-${tabId}`);
   if (!content) return;
 
   if (animate && prevTab !== tabId) {
@@ -649,6 +691,26 @@ function openNavPanel() {
   if (closeBtn) closeBtn.focus();
   panel.addEventListener('keydown', trapFocusNav);
   document.addEventListener('keydown', onEscapeNav);
+
+  setupScrollTop();
+}
+
+function setupScrollTop() {
+  const content = document.getElementById('nav-tab-content');
+  if (!content || document.getElementById('panel-scroll-top')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'panel-scroll-top';
+  btn.className = 'panel-scroll-top';
+  btn.setAttribute('aria-label', 'Volver al inicio del panel');
+  btn.innerHTML = '↑';
+  btn.addEventListener('click', () => content.scrollTo({ top: 0, behavior: 'smooth' }));
+
+  document.getElementById('nav-panel').appendChild(btn);
+
+  content.addEventListener('scroll', () => {
+    btn.classList.toggle('visible', content.scrollTop > 120);
+  }, { passive: true });
 }
 
 function closeNavPanel() {
@@ -736,6 +798,25 @@ function truncate(str, max) {
 
 // ── Tick: cada segundo ────────────────────────────────────
 
+function animateDigit(el, newVal) {
+  if (!el || el.textContent === newVal) return;
+  el.textContent = newVal;
+  el.classList.remove('digit-pop');
+  void el.offsetWidth; // reflow para reiniciar animación
+  el.classList.add('digit-pop');
+}
+
+let lastVibSec = -1;
+function triggerVibration(secsLeft) {
+  if (!navigator.vibrate) return;
+  if (secsLeft === lastVibSec) return;
+  lastVibSec = secsLeft;
+  if (secsLeft === 60)  navigator.vibrate([200, 100, 200, 100, 400]);
+  if (secsLeft === 30)  navigator.vibrate([100, 50, 100, 50, 100]);
+  if (secsLeft === 10)  navigator.vibrate(300);
+  if (secsLeft <= 5 && secsLeft > 0) navigator.vibrate(100);
+}
+
 function tick() {
   renderCurrentTime();
 
@@ -752,10 +833,16 @@ function tick() {
       const h = document.getElementById('icd-hours');
       const m = document.getElementById('icd-mins');
       const s = document.getElementById('icd-secs');
-      if (d) d.textContent = pad(cd.days);
-      if (h) h.textContent = pad(cd.hours);
-      if (m) m.textContent = pad(cd.mins);
-      if (s) s.textContent = pad(cd.secs);
+      if (d) animateDigit(d, pad(cd.days));
+      if (h) animateDigit(h, pad(cd.hours));
+      if (m) animateDigit(m, pad(cd.mins));
+      if (s) animateDigit(s, pad(cd.secs));
+
+      // Modo dramático: últimos 30 minutos
+      const secsLeft = Math.floor((PRIMERA_DIANA - now) / 1000);
+      const isDramatic = secsLeft <= 1800;
+      document.body.classList.toggle('drama-mode', isDramatic);
+      if (isDramatic) triggerVibration(secsLeft);
     }
     return;
   }
@@ -863,9 +950,48 @@ function setupRipples() {
 
 // ── Inicialización ────────────────────────────────────────
 
+// ── Easter egg: 5 taps en el logo ────────────────────────
+
+function setupEasterEgg() {
+  const header = document.getElementById('app-header');
+  if (!header) return;
+  let taps = 0, timer = null;
+
+  header.addEventListener('click', () => {
+    taps++;
+    clearTimeout(timer);
+    timer = setTimeout(() => { taps = 0; }, 1500);
+
+    if (taps >= 5) {
+      taps = 0;
+      fireConfetti();
+    }
+  });
+}
+
+function fireConfetti() {
+  const colors = ['#c8a84b', '#e02535', '#ffca40', '#f0ece4', '#1d4ed8'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = [
+      `left:${Math.random() * 100}vw`,
+      `background:${colors[Math.floor(Math.random() * colors.length)]}`,
+      `width:${Math.random() * 8 + 4}px`,
+      `height:${Math.random() * 8 + 4}px`,
+      `animation-duration:${Math.random() * 1.5 + 1}s`,
+      `animation-delay:${Math.random() * 0.5}s`,
+      `border-radius:${Math.random() > 0.5 ? '50%' : '2px'}`,
+    ].join(';');
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
+
 function init() {
   createEmbers();
   setupRipples();
+  setupEasterEgg();
   renderState();
   tick();
 

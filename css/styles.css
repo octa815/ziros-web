@@ -504,6 +504,36 @@ body {
   justify-content: center;
 }
 
+/* Botón scroll-to-top dentro del panel */
+.panel-scroll-top {
+  position: absolute;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  right: 1.25rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  color: var(--gold);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+.panel-scroll-top.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.panel-scroll-top:hover { background: var(--border); }
+
 .browse-btn {
   display: inline-flex;
   align-items: center;
@@ -906,12 +936,29 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 
-  #nav-panel,
-  #dish-modal {
-    transition: none;
+  /* Resetear shimmer del título (usa background-clip) */
+  .header-title {
+    background: none !important;
+    -webkit-text-fill-color: var(--gold) !important;
+    color: var(--gold) !important;
   }
+
+  /* Transiciones de panel y modal instantáneas */
+  #nav-panel, #dish-modal {
+    transition: none !important;
+  }
+
+  /* Tab slide instantáneo */
+  .tab-from-right, .tab-from-left {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Sin partículas */
+  .ember { display: none !important; }
 }
 
 /* Mayor contraste */
@@ -1607,18 +1654,102 @@ body {
   animation: ripple-out 0.55s ease-out forwards;
 }
 
-/* Desactivar animaciones si el usuario lo prefiere */
-@media (prefers-reduced-motion: reduce) {
-  .header-logo-img,
-  .header-title,
-  .ornament-band,
-  .meal-card,
-  .badge-ahora,
-  .dish-item,
-  .ember {
-    animation: none !important;
-    -webkit-text-fill-color: unset;
-    color: var(--gold);
-  }
+/* ── 31. VIBE — MENSAJES ROTATIVOS ──────────────────────── */
+.meal-vibe {
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: clamp(0.88rem, 3.5vw, 1rem);
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0 0.25rem;
+  min-height: 1.6em;
+  transition: opacity 0.3s ease;
 }
+.meal-vibe.vibe-fade { opacity: 0; }
+
+/* ── 32. MODO DRAMÁTICO IDELLA ───────────────────────────── */
+
+@keyframes digit-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); color: var(--gold-bright); }
+  100% { transform: scale(1); }
+}
+.idella-num.digit-pop {
+  animation: digit-pop 0.28s ease-out;
+}
+
+@keyframes drama-pulse-bg {
+  0%, 100% { background-color: #0a1628; }
+  50%       { background-color: #130508; }
+}
+@keyframes drama-glow-text {
+  0%, 100% { text-shadow: 0 0 20px rgba(224,37,53,0.4); }
+  50%       { text-shadow: 0 0 60px rgba(224,37,53,0.9), 0 0 100px rgba(224,37,53,0.4); }
+}
+
+.drama-mode body,
+body.drama-mode {
+  animation: drama-pulse-bg 1.5s ease-in-out infinite;
+}
+.drama-mode .pre-event-card {
+  border-color: rgba(224, 37, 53, 0.5);
+  box-shadow: 0 0 40px rgba(224, 37, 53, 0.25), inset 0 0 60px rgba(224, 37, 53, 0.05);
+}
+.drama-mode .idella-eyebrow {
+  color: var(--red-light);
+  animation: drama-glow-text 1.5s ease-in-out infinite;
+  font-size: clamp(1rem, 4vw, 1.2rem);
+}
+.drama-mode .idella-num {
+  font-size: clamp(3rem, 14vw, 5rem);
+  color: var(--red-light);
+  text-shadow: 0 0 30px rgba(224,37,53,0.6);
+}
+.drama-mode .idella-lbl {
+  color: var(--red-light);
+  opacity: 0.8;
+}
+.drama-mode .idella-sep {
+  color: var(--red-light);
+  opacity: 0.7;
+}
+.drama-mode .idella-info strong {
+  color: var(--red-light);
+}
+.drama-mode .ornament-band {
+  filter: hue-rotate(180deg) saturate(2);
+}
+
+/* ── 33. EASTER EGG CONFETTI ────────────────────────────── */
+@keyframes confetti-fall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  position: fixed;
+  top: -20px;
+  pointer-events: none;
+  z-index: 9999;
+  animation: confetti-fall linear both;
+}
+
+/* ── 34. MODO MADRUGADA ──────────────────────────────────── */
+
+body.mode-madrugada {
+  --bg:        #050810;
+  --surface:   #080e1c;
+  --surface-2: #0c1424;
+  --text:      #e8e0d4;
+  font-size: 110%;
+}
+body.mode-madrugada .meal-name {
+  font-size: clamp(2.4rem, 11vw, 4rem);
+}
+body.mode-madrugada .dish-item-name {
+  font-size: clamp(1.1rem, 4.5vw, 1.3rem);
+}
+body.mode-madrugada .header-title {
+  letter-spacing: 0.4em;
+}
+
 

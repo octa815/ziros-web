@@ -9,6 +9,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ziros">
   <title>Ziros — La Alkazaba · Elda 2026</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="assets/ziros_logo.png">
+  <link rel="apple-touch-icon" href="assets/ziros_logo.png">
+  <link rel="preload" as="image" href="assets/ziros_logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
@@ -24,7 +28,7 @@
     <div class="ornament-band" aria-hidden="true"></div>
     <div class="header-inner">
       <div class="header-emblem" aria-hidden="true">
-        <img src="assets/ziros_logo.png" alt="Logo Ziros" class="header-logo-img">
+        <img src="assets/ziros_logo.png" alt="" class="header-logo-img">
       </div>
       <h1 class="header-title">ZIROS</h1>
       <p class="header-subtitle">La Alkazaba</p>
@@ -76,7 +80,7 @@
       <button id="back-to-live"
               class="btn-secondary"
               aria-label="Volver al menú actual según la hora">
-        ↩ Volver al inicio
+        ↩ Volver a la comida actual
       </button>
     </div>
 
@@ -112,9 +116,9 @@
        aria-hidden="true"
        tabindex="-1"></div>
 
-  <nav id="nav-panel"
+  <div id="nav-panel"
        class="nav-panel"
-       role="navigation"
+       role="dialog"
        aria-label="Panel de navegación de las fiestas"
        aria-modal="true"
        hidden>
@@ -131,6 +135,7 @@
     <!-- Pestañas de navegación -->
     <div class="nav-tabs" role="tablist" aria-label="Secciones del panel">
       <button class="nav-tab-btn active"
+              id="tab-btn-menus"
               role="tab"
               aria-selected="true"
               aria-controls="nav-tab-content"
@@ -138,6 +143,7 @@
         🍽 Menús
       </button>
       <button class="nav-tab-btn"
+              id="tab-btn-programa"
               role="tab"
               aria-selected="false"
               aria-controls="nav-tab-content"
@@ -145,6 +151,7 @@
         📅 Programa
       </button>
       <button class="nav-tab-btn"
+              id="tab-btn-comparsas"
               role="tab"
               aria-selected="false"
               aria-controls="nav-tab-content"
@@ -154,8 +161,13 @@
     </div>
 
     <!-- Contenido de la pestaña activa (rellenado por JS) -->
-    <div id="nav-tab-content" class="nav-tab-content" role="tabpanel"></div>
-  </nav>
+    <div id="nav-tab-content"
+         class="nav-tab-content"
+         role="tabpanel"
+         aria-live="polite"
+         aria-labelledby="nav-tab-active-label">
+    </div>
+  </div>
 
   <!-- ── MODAL DE PLATO (bottom sheet) ────────────────────── -->
   <div id="modal-overlay"
@@ -185,5 +197,12 @@
 
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

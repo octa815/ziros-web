@@ -1,0 +1,27 @@
+{
+  "name": "Ziros — La Alkazaba · Elda 2026",
+  "short_name": "Ziros",
+  "description": "Menús y programa de las Fiestas de Moros y Cristianos de Elda 2026 · Cuartelillo Ziros",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "assets/ziros_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/ziros_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "food"],
+  "screenshots": []
+}
